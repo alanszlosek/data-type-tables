@@ -1,0 +1,6 @@
+create table Relationship (id text, key text, foreignKey text, language text, createdAt text);
+create table Text (id text, key text, value text, language text, createdAt text);
+create table Integer (id text, key text, value integer, language text, createdAt text);
+
+create index TextKey on Text (id,key,language);
+create index IntegerKey on Text (id,key,language);
