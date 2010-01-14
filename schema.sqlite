@@ -1,6 +1,10 @@
-create table Relationship (id text, key text, foreignKey text, language text, createdAt text);
-create table Text (id text, key text, value text, language text, createdAt text);
-create table Integer (id text, key text, value integer, language text, createdAt text);
+create table Relationship (id text, type text, key text, value text, language text, createdAt text, updatedAt text);
 
+create table Text (id text, type text, key text, value text, language text, createdAt text, updatedAt text);
+create table Integer (id text, type text, key text, value integer, language text, createdAt text, updatedAt text);
+create table Decimal (id text, type text, key text, value real , language text, createdAt text, updatedAt text);
+
+create index RelationshipKey on Relationship (id,key,language);
+create index DecimalKey on Decimal (id,key,language);
+create index IntegerKey on Integer (id,key,language);
 create index TextKey on Text (id,key,language);
-create index IntegerKey on Text (id,key,language);
