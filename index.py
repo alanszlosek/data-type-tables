@@ -1,36 +1,56 @@
-import sqlite3
+#import sqlite3
 
-def Model(object):
-	connection = object
-
-	def __init__(id = ''):
+class Model:
+	id = {
+		'type': 'text'
+	}
+	#connection = object
+	def __init__(self, id = None):
 		self.id = id
 
 		# INTERNALS
 		# which tables we've pulled rows from
 		# this should be private
-		readFrom = {
+		self.readFrom = {
 			'Relationship': False,
 			'Text': False,
 			'Integer': False,
 			'Decimal': False
 		}
+		self.fieldData = {}
 		pass
 
 	def __setattribute__(self, name, value):
-		print('setting ' + name)
-                return object.__setattribute__(self, name, value)
+		dict = object.__getattribute__(self, '__dict__')
+		dict['fieldData'][ name ] = value
 
-        def __getattribute__(self, name):
-                print('getting ' + name)
-		try:
-			a = object.__getattribute__(self, '_attributes')
-			# throws AttributeError
-		except AttributeError as noAttribute:
-			#if self.readFrom[
-			# read from database and hopefully that helps
-			pass
-                return set
+	def __getattribute__(self, name):
+		# need special method for getting field definition
+		# this should only get from the instance __dict__['fieldData']
+		dict = object.__getattribute__(self, '__dict__')
+		if name in dict['fieldData']:
+			return dict['fieldData'][ name ]
+		else:
+			print('not loaded: ' + name)
+			return ''
+		
+
+	def __fieldDefinition(self, name):
+
+		dict = type(self).__dict__
+
+		if name in dict: # field found in class definition
+			return dict[ name ]
+
+		else: # field not found in class definition
+			dict = object.__getattribute__(self, '__dict__')
+			if name in dict: # field found in Model definition
+				return dict[ name ]
+			else:
+				print('Field not found: ' + name)
+			
+
+		return ''
 
 	def read(self, dataType, where):
 		if dataType == 'Text':
@@ -41,7 +61,7 @@ def Model(object):
 		pass
 		
 
-def User(Model):
+class Product(Model):
 	name = {
 		'type': 'text'
 	}
@@ -50,7 +70,15 @@ def User(Model):
 	}
 
 
-conn = sqlite3.connect('test.db')
+#conn = sqlite3.connect('test.db')
+#Model.connection = conn
 
-Model.connection = conn
+u = Product()
+a = u.id
+a = u.name
+a = u.date
 
+u.id = 'hey'
+u.name = 'testing'
+
+print(u.name)
