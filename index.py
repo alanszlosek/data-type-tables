@@ -12,113 +12,158 @@ decimal.getcontext().prec = 2
 
 class Model:
 	connection = object
-	def __init__(self, id = None, language = None):
-		if id:
-			load = True
+	tables = ['Relationship','Text','Integer','Decimal']
+	queries = []
+
+	# allow id to be passed in, or struct of data
+	def __init__(self, id=None):
+		load = False
+		t = type(id)
+		if t is dict:
+			instanceDict = object.__getattribute__(self, '__dict__')
+			instanceDict.update( id )
+
+		elif t is None:
+			#id = random.randrange(0,1000000)
+			# hmm, what to do here?
+			# make sure doesn't already exist
+			pass
+
 		else:
-			load = False
-		self.id = id or random.randrange(0,1000000)
-		self.language = language or ''
+			self.id = id
+			load = True
+			#print('new ' + str(id))
+
 		self.className = type(self).__name__
 
-		# INTERNALS
-		# which tables we've pulled rows from
-		# this should be private
-		self.readFrom = {
-			'Relationship': False,
-			'Text': False,
-			'Integer': False,
-			'Decimal': False
-		}
-
 		if load:
-			self.read()
+			self.load()
 
 		pass
 		
 	def __getattribute__(self, key):
+		# intercept getting a subclass field definition
+
+		# if key is a field definition, return the value from the instanceDict
+		# else, return as normal?
+
 		#print('getting ' + key)
 
 		classDict = type(self).__dict__
-		dict = object.__getattribute__(self, '__dict__')
+		instanceDict = object.__getattribute__(self, '__dict__')
 
-		if key in classDict and classDict[ key ]['type'] == 'Relationship':
-			#print('rel')
-			#print( repr(dict))
+		if key in classDict and type(classDict[ key ]) is dict:
+			if classDict[ key ]['type'] == 'Relationship':
+				#print('rel')
+				#print( repr(dict))
 
-			# how do i do reverse relationships?
-			if 'reverse' in classDict[ key ]:
-				objects = []
-				related = globals()[ key ]
+				# how do i do reverse relationships?
+				if 'reverse' in classDict[ key ]:
+					objects = []
+					related = globals()[ key ]
 
-				# look for current class
+					# look for current class
 
-				for row in Model.connection.execute('select * from Relationship where key=:key and value=:value', {'key': self.className, 'value': self.id}):
-					objects.append( related( row['id'] ) ) 
-				return objects
+					# pull ids for type, and then query ... bah
+
+					query = "select * from Relationship where id<>'type' and key=:key and value=:value"
+					data = {'key': self.className, 'value': self.id}
+
+					for row in Model.connection.execute(query, data):
+						objects.append( related( row['id'] ) ) 
+
+					Model.queries.append( (query,data) )
+
+					return objects
+
+				else:
+					if key in instanceDict:
+						id = instanceDict[ key ]
+						related = globals()[key] # get class for the related Type
+						a = related(id)
+						return a
+
+					else:
+						return None
 
 			else:
-				if key in dict:
-					id = dict[ key ]
-					related = globals()[key]
-					a = related(id)
-					return a
+				#print('getting ' + key)
+
+				if key in instanceDict: # not relationship
+					return instanceDict[ key ]
 
 				else:
 					return None
-			
+
 		else:
 			return object.__getattribute__(self, key)
 
 	def __setattr__(self, key, value):
                 #print('Setting ' + key)
                 # get class dict
-                dict = type(self).__dict__
+		classDict = type(self).__dict__
+		instanceDict = object.__getattribute__(self, '__dict__')
 
-                # if key is in the class dict, then the field was defined and we should prepare it to be saved
-                if key in dict:
+		# if key is in the class dict, then the field was defined and we should prepare it to be saved
+		if key in classDict:
                         #print('Valid field ' + key)
 
                         # store the value deep inside the instance dict, which we'll use to create queries
-                        dict = object.__getattribute__(self, '__dict__')
-                        if not '__pending' in dict:
-                                dict['__pending'] = {}
-                        dict['__pending'][ key ] = value
-                else:
-                        #print('Invalid field ' + key)
-                        pass
-
-                dict = object.__getattribute__(self, '__dict__')
-                dict[ key ] = value
+                        if not '__pending' in instanceDict:
+                                instanceDict['__pending'] = {}
+                        instanceDict['__pending'][ key ] = value
+		else:
+			#print('Invalid field ' + key)
+			pass
+		instanceDict[ key ] = value
 
 	def get(which, where={}):
-		objects = {}
+		# better:
+		# pull from Relationship and build initial cache level
+		# pull from other tables for next cache level
+		# for each at first cache level, instantiate and pass in dict of next cache level
+		# return
+		# at most we'll do N queries, where N is number of tables
 
-		query = 'select distinct value as id from Relationship where id=:id and key=:key'
+		# or unions might help
+
+		queries = []
+		for table in Model.tables:
+			#queries.append( "select " + table + ".* from " + table + ", Relationship where " + table + ".id=Relationship.value and Relationship.id=:id and Relationship.key=:key" )
+			queries.append( "select * from " + table + " where type=:which" )
+
+		query = ' UNION '.join(queries)
 		data = {
-			'id': 'type',
-			'key': which
+			'which': which
 		}
 
-		c = globals()[ which ]
-		# but what if one product doesn't have a name?
+		Model.queries.append( (query,data) )
+
+		cache = {}
 		for row in Model.connection.execute(query, data):
-			if row['id'] in objects:
-				continue
-			else:
-				objects[ row['id'] ] = c( row['id'] )
-			
+			id = row['id']
+			if not row['id'] in cache:
+				cache[ id ] = {}
+				cache[ id ]['id'] = id
+
+			cache[ id ][ row['key'] ] = row['value']
+
+		objects = []	
+		className = globals()[ which ]
+		for (id, fields) in cache.items():
+			objects.append( className( fields ) )
 		
 		return objects
 
-	def read(self):
-		for table in self.readFrom.keys():
-			query = 'select * from ' + table + ' where id=:id'
-			#print(query)
-			#print(self.id)
-			for row in Model.connection.execute(query, {'id':self.id}):
-				dict = object.__getattribute__(self, '__dict__')
-				dict[ row['key'] ] = row['value']
+	def load(self):
+		instanceDict = object.__getattribute__(self, '__dict__')
+		query = 'select * from Relationship where Relationship.id=:id UNION select * from Text where Text.id=:id UNION select * from Integer where Integer.id=:id UNION select * from Decimal where Decimal.id=:id'
+		data = { 'id': self.id }
+
+		Model.queries.append( (query,data) )
+		for row in Model.connection.execute(query, data):
+			instanceDict[ row['key'] ] = row['value']
+		return
 
 	def save(self):
 		classDict = type(self).__dict__
@@ -149,10 +194,17 @@ class Model:
 
 		cursor = Model.connection.cursor()
 		# is object in Relationship?
-		cursor.execute('select value from Relationship where id=:type2 and key=:type and value=:id', data)
+
+		query = 'select value from Relationship where id=:type2 and key=:type and value=:id'
+		Model.queries.append( (query,data) )
+
+		cursor.execute(query , data)
+
 		if cursor.fetchone() == None:
 			query = 'insert into Relationship (id,key,value,createdAt,updatedAt) values(:type2, :type, :id, :createdAt, :updatedAt)'
 			cursor.execute(query, data)
+
+			Model.queries.append( (query,data) )
 			#print('Bar')
 			#print(query)
 			#print( repr(data) )
@@ -166,12 +218,20 @@ class Model:
 				query = 'select id from ' + table + ' where id=:id'
 				cursor.execute(query, data)
 
+				Model.queries.append( (query,data) )
+
 				if cursor.fetchone() == None:
 					query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
 					cursor.execute(query, data)
+
+					Model.queries.append( (query,data) )
 				else:
 					query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and key=:key'
 					cursor.execute(query, data)
+
+					Model.queries.append( (query,data) )
+
+		dict['__pending'] = {}
 
 		
 class Category(Model):
@@ -199,62 +259,90 @@ class Product(Model):
 	}
 
 
-conn = sqlite3.connect('test.db')
+conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
 Model.connection = conn
 
+fill = False
 
-categories = {
-	'A':'',
-	'B':'',
-	'C':'',
-	'D':''
-}
-for category in categories.keys():
-	c = Category()
-	c.name = category
-	c.save()
-	categories[ category ] = c.id
+if fill:
 
-#print( repr(categories) )
+	categories = {
+		'A':'',
+		'B':'',
+		'C':'',
+		'D':''
+	}
+	for category in categories.keys():
+		c = Category()
+		c.name = category
+		c.save()
+		categories[ category ] = c.id
 
-i = 0
-while i < 200:
-	p = Product()
-	p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
-	p.price = str(decimal.Decimal(random.randrange(10000))/100)
+	# create product and assign to category
+	i = 0
+	while i < 200:
+		p = Product()
+		p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
+		p.price = str(decimal.Decimal(random.randrange(10000))/100)
 
-	which = random.sample( list(categories.values()), 1)
-	c = Category( which[0] )
+		which = random.sample( list(categories.values()), 1)
+		c = Category( which[0] )
 
-	p.Category = c.id
-	p.save()
+		p.Category = c.id
+		p.save()
+		
+		i += 1
+
+
+a = False
+b = False
+c = False
+d = False
+e = False
+
+if a == True:
+	products = Model.get('Product')
 	
-	i += 1
+	p = products[0]
+	print('Product ' + p.id)
+	print(p.Category.id)
 
+if b == True:
+	categories = Model.get('Category')
+	cat = Category( categories[0].id )
+	products = cat.Product # will return multiple, since it's a reverse relationship
+	product = products[0]
+	print('Product: ' + product.id)
 
-#p = Product('118577')
-#print(p.Category.id)
-#c = Category('631419')
-#products = c.Product # will return multiple, since it's a reverse relationship
-
-#products = Model.get('Product')
-#products = {}
-#for product in products.values():
-	#print(product.name + ' ' + str(product.price) )
-
-categories = Model.get('Category')
-#categories = {}
-for c in categories.values():
-	print('Products in ' + c.name)
-	products = c.Product
-	#print( str(len(products)))
+if c == True:
+	products = Model.get('Product')
 	for product in products:
-		print(product.name)
-		#print(product.name + ' ' + str(product.price) )
-	print('')
+		print(product.name + ' ' + str(product.price) )
+
+if d == True:
+	categories = Model.get('Category')
+	for c in categories:
+		print('Products in ' + c.name)
+		products = c.Product
+		#print( repr(products))
+		for prod in products:
+			#print( repr(product) )
+			n = prod.name
+			print( n + ' ' + str(prod.id) )
+			
+			#print(product.name + ' ' + str(product.price) )
+			pass
+		print('')
 
 
 conn.commit()
 conn.close()
+
+if False:
+	print('Queries: ' + str(len(Model.queries)))
+	for query in Model.queries:
+		print(query[0])
+		print(query[1])
+		print('')
