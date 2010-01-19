@@ -23,8 +23,8 @@ class Model:
 			instanceDict = object.__getattribute__(self, '__dict__')
 			instanceDict.update( id )
 
-		elif t is None:
-			#id = random.randrange(0,1000000)
+		elif id == None:
+			self.id = random.randrange(0,1000000)
 			# hmm, what to do here?
 			# make sure doesn't already exist
 			pass
@@ -57,17 +57,22 @@ class Model:
 				#print('rel')
 				#print( repr(dict))
 
-				# how do i do reverse relationships?
+				definition = classDict[ key ]
+
+				if 'className' in definition:
+					related = globals()[ definition['className'] ]
+					className = definition['className']
+				else:
+					related = globals()[ key ]
+					className = self.className
+
 				if 'reverse' in classDict[ key ]:
 					objects = []
-					related = globals()[ key ]
-
-					# look for current class
 
 					# pull ids for type, and then query ... bah
 
-					query = "select * from Relationship where id<>'type' and key=:key and value=:value"
-					data = {'key': self.className, 'value': self.id}
+					query = "select * from Relationship where type=:className and key=:className and value=:value"
+					data = {'className': className, 'value': self.id}
 
 					for row in Model.connection.execute(query, data):
 						objects.append( related( row['id'] ) ) 
@@ -79,7 +84,6 @@ class Model:
 				else:
 					if key in instanceDict:
 						id = instanceDict[ key ]
-						related = globals()[key] # get class for the related Type
 						a = related(id)
 						return a
 
@@ -233,18 +237,39 @@ class Model:
 
 		dict['__pending'] = {}
 
+	def value(self, key):
+		instanceDict = object.__getattribute__(self, '__dict__')
+		return instanceDict[ key ]
+
 		
 class Category(Model):
 	name = {
 		'type': 'Text'
 	}
-	parent = {
+	# returns an instance of Category
+	# :a = self.id
+	# :b = key = 'Category'
+	# :c = self.className = 'Category'
+	# select value from Relationship where id=:a and key=:b and type=:c
+	Category = { # parent Category
+		# one-to-one mapping
 		'type': 'Relationship'
+	}
+	# :a = self.id
+	# :b = className = 'Category'
+	# select id from Relationship where value=:a and type=:b and key=:c
+	children = {
+		'className': 'Category',
+		'type': 'Relationship',
+		'reverse': True
 	}
 	Product = {
 		'type': 'Relationship',
 		'reverse': True # reverse classes don't pre-load
 	}
+
+	def parent(self):
+		return self.Category
 
 class Product(Model):
 	name = {
@@ -264,33 +289,56 @@ conn.row_factory = sqlite3.Row
 
 Model.connection = conn
 
+
+
+def catFill(name, children, parent=0):
+	c = Category()
+	c.name = name 
+	c.Category = parent
+	c.save()
+
+	if len(children):
+		for (child, children2) in children.items():
+			catFill(child, children2, c.id)
+	
 fill = False
-
-if fill:
-
+if fill == True:
 	categories = {
-		'A':'',
-		'B':'',
-		'C':'',
-		'D':''
+		'Water': {
+			'Ocean': {
+				'Indian': {},
+				'Atlantic': {}
+			},
+			'Lake': {
+				'Okeechobee': {}
+			}
+		},
+		'Land': {
+			'Continent': {
+				'North America': {},
+				'Australia': {}
+			},
+			'Island': {
+				'Prince Edward': {}
+			}
+		}
 	}
-	for category in categories.keys():
-		c = Category()
-		c.name = category
-		c.save()
-		categories[ category ] = c.id
+	for (category,children) in categories.items():
+		catFill(category, children, 0)
 
 	# create product and assign to category
+
+	categories = Model.get('Category')
+
 	i = 0
 	while i < 200:
 		p = Product()
 		p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
 		p.price = str(decimal.Decimal(random.randrange(10000))/100)
 
-		which = random.sample( list(categories.values()), 1)
-		c = Category( which[0] )
+		category = random.sample(categories, 1)[0]
 
-		p.Category = c.id
+		p.Category = category.id
 		p.save()
 		
 		i += 1
@@ -300,7 +348,8 @@ a = False
 b = False
 c = False
 d = False
-e = False
+e = True 
+f = False
 
 if a == True:
 	products = Model.get('Product')
@@ -336,11 +385,29 @@ if d == True:
 			pass
 		print('')
 
+if e == True:
+	# first get top-level categories,
+	# then print the names of their children to two levels
+	categories = Model.get('Category')
+	topCategories = []
+	for category in categories:
+		if category.value('Category') == '0':
+			topCategories.append( category )
+
+	for category in topCategories:
+		print(category.name)
+		for child in category.children:
+			print("\t" + child.name)
+			for child2 in child.children:
+				print("\t\t" + child2.name)
+
 
 conn.commit()
 conn.close()
 
-if False:
+debug = False
+
+if debug == True:
 	print('Queries: ' + str(len(Model.queries)))
 	for query in Model.queries:
 		print(query[0])
