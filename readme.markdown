@@ -36,3 +36,13 @@ Get Product objects for the first Category:
 	categories = Model.get('Category')
 	cat = Category( categories[0].id )
 	products = cat.Product
+
+Usage
+====
+
+1. Create an sqlite3 database with reload.sh.
+1. Fill data by setting fill=True near line 269
+1. Run: python3 ./index.py
+1. Turn off fill
+1. Select a test to run by setting a=True or b=True and so on
+1. Run: python3 ./index.py
