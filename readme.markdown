@@ -34,5 +34,5 @@ They extend Model, which gives them save() ability.
 Get Product objects for the first Category:
 
 	categories = Model.get('Category')
-        cat = Category( categories[0].id )
-        products = cat.Product
+	cat = Category( categories[0].id )
+	products = cat.Product
