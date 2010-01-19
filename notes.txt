@@ -1,0 +1,5 @@
+Inserts of all fields will be quite expensive: multiple indices to update, across several tables.
+
+Best for apps with few data modifications compared to reads, since inserts might cover 4 tables, where each requires an index update.
+
+Also, best for apps with minimal searching. Joins are fine, but searching, ugh.
