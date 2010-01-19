@@ -1,3 +1,3 @@
 #!/bin/sh
-rm test.db
-sqlite3 test.db < schema.sqlite
+rm dtt.db
+sqlite3 dtt.db < schema.sqlite
