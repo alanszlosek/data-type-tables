@@ -1,6 +1,8 @@
-from Model import *
-import setup00
+from Model import Model
+from setup00 import *
 
-products = Model.get('Product')
-for product in products:
-	print(product.name + ' ' + str(product.price) )
+products = Model.get(Product)
+
+p = products[0]
+print('Product ' + p.id)
+print(p.Category.id)

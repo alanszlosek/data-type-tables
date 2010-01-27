@@ -1,8 +1,15 @@
-from Model import *
-import setup00
+from Model import Model
+from setup00 import *
 
-categories = Model.get('Category')
-cat = Category( categories[0].id )
-products = cat.Product # will return multiple, since it's a reverse relationship
-product = products[0]
-print('Product: ' + product.id)
+data = {
+	'id': '99999999',
+	'name': 'New Product2'
+}
+a = Product(data)
+a.save()
+
+id = a.id
+
+b = Product(id)
+print(str(b.id) + ': ' + b.name)
+
