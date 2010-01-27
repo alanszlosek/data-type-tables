@@ -241,6 +241,22 @@ class Model:
 		instanceDict = object.__getattribute__(self, '__dict__')
 		return instanceDict[ key ]
 
+class HierarchyModel(Model):
+	def parent(self):
+		pass
+
+	def ancestors(self):
+		pass
+	def parents(self):
+		pass
+
+	def children(self):
+		pass
+
+	def descendents(self):
+		pass
+	
+
 		
 class Category(Model):
 	name = {

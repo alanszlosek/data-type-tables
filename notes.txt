@@ -3,3 +3,14 @@ Inserts of all fields will be quite expensive: multiple indices to update, acros
 Best for apps with few data modifications compared to reads, since inserts might cover 4 tables, where each requires an index update.
 
 Also, best for apps with minimal searching. Joins are fine, but searching, ugh.
+
+QUESTIONS
+
+What about sorting? Should I have another table of sort values, similar to Relationship?
+	select id from Sorting where type='Product' and key='name' order by value;
+	create table Sorting (id text, type text, key text, value integer, language text, createdAt text, updatedAt text);
+
+	Suppose I could have just done:
+		select id from Text where type='Product' and key='name' order by value;
+
+	But I imagined there might be more complex sorting scenarios to merit another table. It'd have to be populated manually with the values you might want to sort on. This would also allow you to name your sort set, so you could have multiple sort sets per Type.
