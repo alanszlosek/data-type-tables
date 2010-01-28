@@ -3,7 +3,7 @@ from setup00 import *
 
 # first get top-level categories,
 # then print the names of their children to two levels
-categories = Model.Model.get('Category')
+categories = Model.Model.get(Category)
 topCategories = []
 for category in categories:
 	if category.value('Category') == '0':
