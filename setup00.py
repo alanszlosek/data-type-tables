@@ -1,18 +1,18 @@
-from Model import *
+import Model
 import sqlite3
 
 def commit():
-	Model.connection.commit()
-	Model.connection.close()
+	Model.Model.connection.commit()
+	Model.Model.connection.close()
 	
 def debug():
-	print('Queries: ' + str(len(Model.queries)))
-	for query in Model.queries:
+	print('Queries: ' + str(len(Model.Model.queries)))
+	for query in Model.Model.queries:
 		print(query[0])
 		print(query[1])
 		print('')
 
-class Category(Model):
+class Category(Model.Model):
 	name = {
 		'type': 'Text'
 	}
@@ -41,7 +41,7 @@ class Category(Model):
 	def parent(self):
 		return self.Category
 
-class Product(Model):
+class Product(Model.Model):
 	name = {
 		'type': 'Text'
 	}
@@ -57,4 +57,4 @@ class Product(Model):
 conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
-Model.connection = conn
+Model.Model.connection = conn

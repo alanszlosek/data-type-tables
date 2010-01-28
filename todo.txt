@@ -1,3 +1,9 @@
+- not quite sure whether to reference module name
+
+- tempted to add a 'bidirectional' True or False flag to the Relationship field, that way I can do away with 'reverse' and the stupid query that requires. but still, one should be 1to1, the other 1toMany. gotta be a better way.
+	- or maybe, when saving a Relationship that relates a type to another type, check for the presense of the relationship in the other direction. if it exists, save in both directions.
+	- so that means we need a 'oneOrMany' flag to specify how many should be returned
+
 - instanceDict['__pending'] should only include names of fields that have changed. No sense in duplicating the values from instanceDict.
 
 Done

@@ -1,7 +1,7 @@
-from Model import Model
+import Model
 from setup00 import *
 
-products = Model.get(Product)
+products = Model.Model.get(Product)
 
 p = products[0]
 print('Product ' + p.id)

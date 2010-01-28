@@ -1,7 +1,7 @@
-from Model import *
-import setup00
+import Model
+from setup00 import *
 
-categories = Model.get('Category')
+categories = Model.Model.get('Category')
 for c in categories:
 	print('Products in ' + c.name)
 	products = c.Product

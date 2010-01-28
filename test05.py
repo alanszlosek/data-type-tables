@@ -1,6 +1,6 @@
-from Model import *
-import setup00
+import Model
+from setup00 import *
 
-products = Model.get('Product')
+products = Model.Model.get('Product')
 for product in products:
 	print(product.name + ' ' + str(product.price) )

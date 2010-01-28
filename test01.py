@@ -1,4 +1,4 @@
-from Model import Model
+import Model
 from setup00 import *
 
 a = Product()

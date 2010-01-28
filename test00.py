@@ -1,5 +1,5 @@
 import Model
-import setup00
+from setup00 import *
 
 def catFill(name, children, parent=0):
 	c = Category()

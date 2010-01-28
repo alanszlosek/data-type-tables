@@ -1,3 +1,5 @@
+I do like how you can use c=type(Product) and then c() to instantiate a Product.
+
 Inserts of all fields will be quite expensive: multiple indices to update, across several tables.
 
 Best for apps with few data modifications compared to reads, since inserts might cover 4 tables, where each requires an index update.
