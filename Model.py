@@ -7,6 +7,7 @@ decimal.getcontext().prec = 2
 
 class Model:
 	connection = object
+	module = '__main__' # default module to find classes in
 	tables = ['Text','Integer','Decimal']
 	# Relationship, Type, Hierarchy
 	queries = []
@@ -60,35 +61,38 @@ class Model:
 		instanceDict = object.__getattribute__(self, '__dict__')
 
 		if key in classDict and type(classDict[ key ]) is dict:
-			if classDict[ key ]['type'] == 'Relationship':
-				#print('rel')
-				#print( repr(dict))
-
-				definition = classDict[ key ]
-
-				# globals() doesn't have the class in scope .... we're in module scope
-				if 'className' in definition:
-					className = definition['className']
+			definition = classDict[ key ]
+			if definition['type'] == 'Relationship':
+				if 'class' in definition:
+					# class object was passed in ... makes things easy!
+					related = definition['class']
 				else:
-					className = self.className
-				related = sys.modules['__main__'].__getattribute__(key)
-
-
-				query = 'select * from Relationship where id=:id'
-				data = { 'id': self.id }
-				Model.queries.append( (query,data) )
-				for row in Model.connection.execute(query, data):
-					if row['key'] not in instanceDict:
-						instanceDict[ row['key'] ] = []
-					instanceDict[ row['key'] ].append( row )
+					# globals() doesn't have the class in scope .... we're in module scope
+					related = sys.modules[ Model.module ].__getattribute__(key)
 
 				if key in instanceDict:
-					id = instanceDict[ key ]
-					a = related(id)
-					return a
-
+					return instanceDict[key]
 				else:
-					return None
+					query = 'select * from Relationship where id=:id'
+					data = {
+						'id': self.id,
+						'key': key
+					}
+					Model.queries.append( (query,data) )
+
+					objects = []
+					for row in Model.connection.execute(query, data):
+						objects.append( related(row['value']) )
+
+					if 'many' in definition:
+						return objects
+					elif len(objects) > 0:
+						return objects[0]
+					else:
+						return None
+
+			elif definition['type'] == 'Hierarchy':
+				pass
 
 			else:
 				#print('getting ' + key)
@@ -110,12 +114,16 @@ class Model:
 
 		# if key is in the class dict, then the field was defined and we should prepare it to be saved
 		if key in classDict:
-                        #print('Valid field ' + key)
+			# store the value deep inside the instance dict, which we'll use to create queries
+			if not '__pending' in instanceDict:
+				instanceDict['__pending'] = []
 
-                        # store the value deep inside the instance dict, which we'll use to create queries
-                        if not '__pending' in instanceDict:
-                                instanceDict['__pending'] = []
-                        instanceDict['__pending'].append( key )
+			if instanceDict['__pending'].count( key ) == 0:
+				instanceDict['__pending'].append( key )
+
+			if key == 'Relationship':
+				print(value)
+
 		else:
 			#print('Invalid field ' + key)
 			pass
@@ -175,17 +183,22 @@ class Model:
 		dict = object.__getattribute__(self, '__dict__')
 
 		staging = {
-			#'Relationship': {},
 			'Text': {},
 			'Integer': {},
 			'Decimal': {}
 		}
+		relationship = {}
 		
 		#print('Saving:')
 		for key in dict['__pending']:
 			table = classDict[ key ]['type']
+			if table == 'Relationship':
+				relationship[ key ] = self.__getattribute__(key)
+			else:
+				staging[ table ][ key ] = self.__getattribute__(key)
 
-			staging[ table ][ key ] = self.__getattribute__(key)
+		#if self.className == 'Product':
+		#	print(staging)
 
 		d = datetime.datetime.today()
 
@@ -197,7 +210,6 @@ class Model:
 		}
 
 		cursor = Model.connection.cursor()
-		# is object in Relationship?
 
 		query = 'select id from Type where id=:id and name=:type'
 		Model.queries.append( (query,data) )
@@ -216,23 +228,74 @@ class Model:
 				data['value'] = value
 
 				cursor = Model.connection.cursor()
-				query = 'select id from ' + table + ' where id=:id'
+				query = 'select id from ' + table + ' where id=:id and type=:type and key=:key'
 				cursor.execute(query, data)
 
 				Model.queries.append( (query,data) )
 
 				if cursor.fetchone() == None:
 					query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
-					print(query)
-					print(data)
 					cursor.execute(query, data)
-
 					Model.queries.append( (query,data) )
+
 				else:
-					query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and key=:key'
+					query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
 					cursor.execute(query, data)
-
 					Model.queries.append( (query,data) )
+
+		# relationship
+		table = 'Relationship'
+		data['id'] = self.id
+		data['type'] = self.className
+		for (key,value) in relationship.items():
+			data['key'] = key
+			data['value'] = value.id
+
+			cursor = Model.connection.cursor()
+			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
+			cursor.execute(query, data)
+
+			Model.queries.append( (query,data) )
+
+			if cursor.fetchone() == None:
+				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+				cursor.execute(query, data)
+				Model.queries.append( (query,data) )
+
+			else:
+				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
+				cursor.execute(query, data)
+				Model.queries.append( (query,data) )
+
+		# reverse relationship
+		table = 'Relationship'
+		data['key'] = self.className
+		data['value'] = self.id
+		for (key,value) in relationship.items():
+			target = sys.modules[ Model.module ].__getattribute__(key)
+			targetDict = object.__getattribute__(target, '__dict__')
+
+			if not self.className in targetDict:
+				continue
+
+			data['id'] = value.id
+			data['type'] = target.__name__
+
+			cursor = Model.connection.cursor()
+			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
+			cursor.execute(query, data)
+
+			Model.queries.append( (query,data) )
+
+			if cursor.fetchone() == None:
+				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+				cursor.execute(query, data)
+				Model.queries.append( (query,data) )
+
+			else:
+				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
+				cursor.execute(query, data)
+				Model.queries.append( (query,data) )
 
 		dict['__pending'] = []
 

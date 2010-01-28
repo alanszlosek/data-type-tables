@@ -47,15 +47,18 @@ if fill == True:
 	categories = Model.Model.get(Category)
 
 	i = 0
-	while i < 200:
+	while i < 10:
 		p = Product()
+		# when these save, Category relationship saving messes up
 		p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
 		p.price = str(decimal.Decimal(random.randrange(10000))/100)
 
-		#category = random.sample(categories, 1)[0]
+		category = random.sample(categories, 1)[0]
 
-		#p.Category = category.id
+		p.Category = category
 		p.save()
+
+		Model.Model.connection.commit()
 		
 		i += 1
 

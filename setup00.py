@@ -12,6 +12,10 @@ def debug():
 		print(query[1])
 		print('')
 
+# predefine, so Category can use the class object
+class Product(Model.Model):
+	pass
+
 class Category(Model.Model):
 	name = {
 		'type': 'Text'
@@ -25,16 +29,10 @@ class Category(Model.Model):
 		# one-to-one mapping
 		'type': 'Hierarchy'
 	}
-	# :a = self.id
-	# :b = className = 'Category'
-	# select id from Relationship where value=:a and type=:b and key=:c
-	children = {
-		'className': 'Category',
-		'type': 'Relationship',
-		'reverse': True
-	}
 	Product = {
-		'type': 'Relationship'
+		'type': 'Relationship',
+		'class': Product,
+		'many': True
 		#'reverse': True # reverse classes don't pre-load
 	}
 
@@ -51,7 +49,7 @@ class Product(Model.Model):
 	}
 	Category = {
 		'type': 'Relationship',
-		'one': True
+		'class': Category
 	}
 
 
@@ -59,3 +57,4 @@ conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
 Model.Model.connection = conn
+Model.Model.module = __name__
