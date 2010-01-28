@@ -4,15 +4,19 @@ import Model
 from setup00 import *
 decimal.getcontext().prec = 2
 
-def catFill(name, children, parent=0):
+def catFill(name, children, parent=None):
 	c = Category()
 	c.name = name 
-	c.Category = parent
+	if parent != None:
+		c.setParent(parent)
 	c.save()
 
-	if len(children):
+	if parent == None:
+		c.makeTree()
+
+	if len(children) > 0:
 		for (child, children2) in children.items():
-			catFill(child, children2, c.id)
+			catFill(child, children2, c)
 	
 fill = True
 if fill == True:
@@ -37,10 +41,7 @@ if fill == True:
 		}
 	}
 	for (category,children) in categories.items():
-		#catFill(category, children, 0)
-		c = Category()
-		c.name = category
-		c.save()
+		catFill(category, children, None)
 
 	# create product and assign to category
 
@@ -58,8 +59,4 @@ if fill == True:
 		p.Category = category
 		p.save()
 
-		Model.Model.connection.commit()
-		
 		i += 1
-
-commit()

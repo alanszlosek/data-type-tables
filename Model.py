@@ -92,7 +92,8 @@ class Model:
 						return None
 
 			elif definition['type'] == 'Hierarchy':
-				pass
+				# not the right way to access hierarchy elements
+				return None
 
 			else:
 				#print('getting ' + key)
@@ -252,6 +253,7 @@ class Model:
 			data['value'] = value.id
 
 			cursor = Model.connection.cursor()
+			# requires exact checking for id,type,key,value, since the first 3 might map a record to many values
 			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
 			cursor.execute(query, data)
 

@@ -1,7 +1,11 @@
+-- for simple relationships: Product to Category
 create table Relationship (id text, type text, key text, value text, language text, createdAt text, updatedAt text);
--- table that holds tree of hierarchy
+
+-- for tree-like relationships: Category to Sub-Category
 -- http://dev.mysql.com/tech-resources/articles/hierarchical-data.html
 create table Hierarchy (id text, type text, tree text, lft integer, rgt integer, createdAt text, updatedAt text);
+
+-- for non-simple sorting: more-so than Product name
 create table Sorting (id text, type text, tree text, lft integer, rgt integer, createdAt text, updatedAt text);
 
 -- and I might like to pull type to id mapping out of the Relationship table
@@ -11,7 +15,7 @@ create table Text (id text, type text, key text, value text, language text, crea
 create table Integer (id text, type text, key text, value integer, language text, createdAt text, updatedAt text);
 create table Decimal (id text, type text, key text, value real , language text, createdAt text, updatedAt text);
 
-create index RelationshipKey on Relationship (id,key,language);
+--create index RelationshipKey on Relationship (id,key,language);
 create index DecimalKey on Decimal (id,key,language);
 create index IntegerKey on Integer (id,key,language);
 create index TextKey on Text (id,key,language);

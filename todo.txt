@@ -1,3 +1,5 @@
+- model and import ecommerce database, or a subset
+
 - fix Relationship interaction
 
 - not quite sure whether to reference module name

@@ -1,4 +1,5 @@
 import Model
+import HierarchyModel
 import sqlite3
 
 def commit():
@@ -16,24 +17,14 @@ def debug():
 class Product(Model.Model):
 	pass
 
-class Category(Model.Model):
+class Category(HierarchyModel.HierarchyModel):
 	name = {
 		'type': 'Text'
 	}
-	# returns an instance of Category
-	# :a = self.id
-	# :b = key = 'Category'
-	# :c = self.className = 'Category'
-	# select value from Relationship where id=:a and key=:b and type=:c
-	Category = { # parent Category
-		# one-to-one mapping
-		'type': 'Hierarchy'
-	}
 	Product = {
 		'type': 'Relationship',
-		'class': Product,
+		#'class': Product,
 		'many': True
-		#'reverse': True # reverse classes don't pre-load
 	}
 
 	def parent(self):
@@ -48,8 +39,8 @@ class Product(Model.Model):
 		'clean': ''
 	}
 	Category = {
-		'type': 'Relationship',
-		'class': Category
+		'type': 'Relationship'
+		#'class': Category
 	}
 
 
@@ -57,4 +48,5 @@ conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
 Model.Model.connection = conn
+Model.Model.connection.isolation_level = None
 Model.Model.module = __name__
