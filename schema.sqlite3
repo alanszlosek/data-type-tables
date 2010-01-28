@@ -5,7 +5,7 @@ create table Hierarchy (id text, type text, tree text, lft integer, rgt integer,
 create table Sorting (id text, type text, tree text, lft integer, rgt integer, createdAt text, updatedAt text);
 
 -- and I might like to pull type to id mapping out of the Relationship table
-create table Type (id text, type text, createdAt text, updatedAt text);
+create table Type (id text, name text, createdAt text);
 
 create table Text (id text, type text, key text, value text, language text, createdAt text, updatedAt text);
 create table Integer (id text, type text, key text, value integer, language text, createdAt text, updatedAt text);

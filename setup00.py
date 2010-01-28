@@ -23,7 +23,7 @@ class Category(Model.Model):
 	# select value from Relationship where id=:a and key=:b and type=:c
 	Category = { # parent Category
 		# one-to-one mapping
-		'type': 'Relationship'
+		'type': 'Hierarchy'
 	}
 	# :a = self.id
 	# :b = className = 'Category'
@@ -34,8 +34,8 @@ class Category(Model.Model):
 		'reverse': True
 	}
 	Product = {
-		'type': 'Relationship',
-		'reverse': True # reverse classes don't pre-load
+		'type': 'Relationship'
+		#'reverse': True # reverse classes don't pre-load
 	}
 
 	def parent(self):
@@ -50,7 +50,8 @@ class Product(Model.Model):
 		'clean': ''
 	}
 	Category = {
-		'type': 'Relationship'
+		'type': 'Relationship',
+		'one': True
 	}
 
 

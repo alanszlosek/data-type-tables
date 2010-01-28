@@ -1,3 +1,5 @@
+- fix Relationship interaction
+
 - not quite sure whether to reference module name
 
 - tempted to add a 'bidirectional' True or False flag to the Relationship field, that way I can do away with 'reverse' and the stupid query that requires. but still, one should be 1to1, the other 1toMany. gotta be a better way.

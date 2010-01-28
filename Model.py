@@ -1,3 +1,4 @@
+import sys
 import random
 #import uuid
 import datetime
@@ -6,7 +7,8 @@ decimal.getcontext().prec = 2
 
 class Model:
 	connection = object
-	tables = ['Relationship','Text','Integer','Decimal']
+	tables = ['Text','Integer','Decimal']
+	# Relationship, Type, Hierarchy
 	queries = []
 
 	# allow id to be passed in, or struct of data
@@ -21,8 +23,9 @@ class Model:
 				# set instance variables
 				instanceDict.update( id )
 				# now push the variables into the pending queue for the save()
-				instanceDict['__pending'] = {}
-				instanceDict['__pending'].update( id )
+				instanceDict['__pending'] = []
+				for key in id.keys():
+					instanceDict['__pending'].append( key )
 			else:
 				print('Not passing in a full dataset. id not specified')
 
@@ -38,6 +41,7 @@ class Model:
 			#print('new ' + str(id))
 
 		self.className = type(self).__name__
+		self.type = type(self)
 
 		if load:
 			self.load()
@@ -62,36 +66,29 @@ class Model:
 
 				definition = classDict[ key ]
 
+				# globals() doesn't have the class in scope .... we're in module scope
 				if 'className' in definition:
-					related = globals()[ definition['className'] ]
 					className = definition['className']
 				else:
-					related = globals()[ key ]
 					className = self.className
+				related = sys.modules['__main__'].__getattribute__(key)
 
-				if 'reverse' in classDict[ key ]:
-					objects = []
 
-					# pull ids for type, and then query ... bah
+				query = 'select * from Relationship where id=:id'
+				data = { 'id': self.id }
+				Model.queries.append( (query,data) )
+				for row in Model.connection.execute(query, data):
+					if row['key'] not in instanceDict:
+						instanceDict[ row['key'] ] = []
+					instanceDict[ row['key'] ].append( row )
 
-					query = "select * from Relationship where type=:className and key=:className and value=:value"
-					data = {'className': className, 'value': self.id}
-
-					for row in Model.connection.execute(query, data):
-						objects.append( related( row['id'] ) ) 
-
-					Model.queries.append( (query,data) )
-
-					return objects
+				if key in instanceDict:
+					id = instanceDict[ key ]
+					a = related(id)
+					return a
 
 				else:
-					if key in instanceDict:
-						id = instanceDict[ key ]
-						a = related(id)
-						return a
-
-					else:
-						return None
+					return None
 
 			else:
 				#print('getting ' + key)
@@ -117,8 +114,8 @@ class Model:
 
                         # store the value deep inside the instance dict, which we'll use to create queries
                         if not '__pending' in instanceDict:
-                                instanceDict['__pending'] = {}
-                        instanceDict['__pending'][ key ] = value
+                                instanceDict['__pending'] = []
+                        instanceDict['__pending'].append( key )
 		else:
 			#print('Invalid field ' + key)
 			pass
@@ -156,7 +153,7 @@ class Model:
 			cache[ id ][ row['key'] ] = row['value']
 
 		objects = []	
-		className = type(which)
+		className = which
 		for (id, fields) in cache.items():
 			objects.append( className( fields ) )
 		
@@ -165,9 +162,9 @@ class Model:
 
 	def load(self):
 		instanceDict = object.__getattribute__(self, '__dict__')
-		query = 'select * from Relationship where Relationship.id=:id UNION select * from Text where Text.id=:id UNION select * from Integer where Integer.id=:id UNION select * from Decimal where Decimal.id=:id'
-		data = { 'id': self.id }
 
+		query = 'select * from Text where Text.id=:id UNION select * from Integer where Integer.id=:id UNION select * from Decimal where Decimal.id=:id'
+		data = { 'id': self.id }
 		Model.queries.append( (query,data) )
 		for row in Model.connection.execute(query, data):
 			instanceDict[ row['key'] ] = row['value']
@@ -178,24 +175,23 @@ class Model:
 		dict = object.__getattribute__(self, '__dict__')
 
 		staging = {
-			'Relationship': {},
+			#'Relationship': {},
 			'Text': {},
 			'Integer': {},
 			'Decimal': {}
 		}
 		
 		#print('Saving:')
-		for (key,value) in dict['__pending'].items():
+		for key in dict['__pending']:
 			table = classDict[ key ]['type']
 
-			staging[ table ][ key ] = value
+			staging[ table ][ key ] = self.__getattribute__(key)
 
 		d = datetime.datetime.today()
 
 		data = {
 			'id': self.id,
 			'type': self.className,
-			'type2': 'type',
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}
@@ -203,19 +199,16 @@ class Model:
 		cursor = Model.connection.cursor()
 		# is object in Relationship?
 
-		query = 'select value from Relationship where id=:type2 and key=:type and value=:id'
+		query = 'select id from Type where id=:id and name=:type'
 		Model.queries.append( (query,data) )
 
 		cursor.execute(query , data)
 
 		if cursor.fetchone() == None:
-			query = 'insert into Relationship (id,key,value,createdAt,updatedAt) values(:type2, :type, :id, :createdAt, :updatedAt)'
+			query = 'insert into Type (id,name,createdAt) values(:id, :type, :createdAt)'
 			cursor.execute(query, data)
 
 			Model.queries.append( (query,data) )
-			#print('Bar')
-			#print(query)
-			#print( repr(data) )
 
 		for (table,fields) in staging.items():
 			for (key,value) in fields.items():
@@ -230,6 +223,8 @@ class Model:
 
 				if cursor.fetchone() == None:
 					query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+					print(query)
+					print(data)
 					cursor.execute(query, data)
 
 					Model.queries.append( (query,data) )
@@ -239,7 +234,7 @@ class Model:
 
 					Model.queries.append( (query,data) )
 
-		dict['__pending'] = {}
+		dict['__pending'] = []
 
 	def value(self, key):
 		instanceDict = object.__getattribute__(self, '__dict__')

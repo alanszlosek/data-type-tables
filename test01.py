@@ -10,3 +10,4 @@ id = a.id
 b = Product(id)
 print(str(b.id) + ': ' + b.name)
 
+commit()

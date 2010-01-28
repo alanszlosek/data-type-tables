@@ -1,5 +1,8 @@
+import random
+import decimal
 import Model
 from setup00 import *
+decimal.getcontext().prec = 2
 
 def catFill(name, children, parent=0):
 	c = Category()
@@ -34,11 +37,14 @@ if fill == True:
 		}
 	}
 	for (category,children) in categories.items():
-		catFill(category, children, 0)
+		#catFill(category, children, 0)
+		c = Category()
+		c.name = category
+		c.save()
 
 	# create product and assign to category
 
-	categories = Model.get('Category')
+	categories = Model.Model.get(Category)
 
 	i = 0
 	while i < 200:
@@ -46,9 +52,9 @@ if fill == True:
 		p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
 		p.price = str(decimal.Decimal(random.randrange(10000))/100)
 
-		category = random.sample(categories, 1)[0]
+		#category = random.sample(categories, 1)[0]
 
-		p.Category = category.id
+		#p.Category = category.id
 		p.save()
 		
 		i += 1
