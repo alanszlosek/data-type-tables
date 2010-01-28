@@ -1,3 +1,6 @@
+- use Hierarchy.tree to hold id of immediate parent
+	- can use this to easily find siblings
+
 - model and import ecommerce database, or a subset
 
 - fix Relationship interaction

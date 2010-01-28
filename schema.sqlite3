@@ -3,7 +3,8 @@ create table Relationship (id text, type text, key text, value text, language te
 
 -- for tree-like relationships: Category to Sub-Category
 -- http://dev.mysql.com/tech-resources/articles/hierarchical-data.html
-create table Hierarchy (id text, type text, tree text, lft integer, rgt integer, createdAt text, updatedAt text);
+-- Hierarchy.tree is for named trees
+create table Hierarchy (id text, type text, parent tree, tree text, lft integer, rgt integer, createdAt text, updatedAt text);
 
 -- for non-simple sorting: more-so than Product name
 create table Sorting (id text, type text, tree text, lft integer, rgt integer, createdAt text, updatedAt text);

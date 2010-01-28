@@ -74,12 +74,13 @@ class HierarchyModel(Model.Model):
 		Model.Model.connection.execute(query, data)
 
 		d = datetime.datetime.today()
-		query = 'insert into Hierarchy (id,type,lft,rgt,createdAt,updatedAt) values(:id,:type,:left,:right,:createdAt,:updatedAt)'
+		query = 'insert into Hierarchy (id,type,lft,rgt,parent,createdAt,updatedAt) values(:id,:type,:left,:right,:parent,:createdAt,:updatedAt)'
 		data = {
 			'id': self.id,
 			'type': self.className,
 			'left': rgt,
 			'right': rgt+1,
+			'parent': parentHierarchy['id'],
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
@@ -123,7 +124,7 @@ class HierarchyModel(Model.Model):
 	def descendents(self):
 		pass
 
-	def siblings(self, tree):
+	def siblings(self):
 		# hmm, where do we get lft and rgt from? are they already loaded into the instance?
 		parent = self.getParent()
 		parentHierarcy = parent.getHierarchy()
@@ -144,11 +145,12 @@ class HierarchyModel(Model.Model):
 			objects.append( b(row['id']) )
 		return objects 
 
-	def tree(treeType):
+	def tree(treeType, name=''):
 		# would be nice to pull sibling ids and get their fields in one go, maybe by modeling Model.get()?
-		query = 'select id from Hierarchy where lft=1 and type=:type'
+		query = 'select id from Hierarchy where lft=1 and type=:type and tree=:tree'
 		data = {
-			'type': treeType.__name__
+			'type': treeType.__name__,
+			'tree': name
 		}
 
 		Model.Model.queries.append( (query,data) )
