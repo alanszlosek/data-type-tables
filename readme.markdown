@@ -5,16 +5,15 @@ Wanted to see first-hand how an ORM would be written that stores data by data ty
 
 Sample classes: Category and Product
 
-	class Category(Model):
+	class Category(HierarchyModel):
+		# HierarchyModel is a sub-class of Model
+		# extending HierarchyModel gives us parent/child functionality
 		name = {
 			'type': 'Text' # means this value is stored in the Text table
 		}
-		parent = {
-			'type': 'Relationship'
-		}
 		Product = {
 			'type': 'Relationship',
-			'reverse': True # reverse relationships are loaded when they're requested
+			'many': True
 		}
 
 	class Product(Model):
@@ -22,8 +21,7 @@ Sample classes: Category and Product
 			'type': 'Text'
 		}
 		price = {
-			'type': 'Decimal',
-			'clean': ''
+			'type': 'Decimal'
 		}
 		Category = {
 			'type': 'Relationship'
@@ -33,16 +31,12 @@ They extend Model, which gives them save() ability.
 
 Get Product objects for the first Category:
 
-	categories = Model.get('Category')
-	cat = Category( categories[0].id )
-	products = cat.Product
+	categories = Model.get(Category)
+	products = categories[0].Product
 
 Usage
 ====
 
 1. Create an sqlite3 database with reload.sh.
-1. Fill data by setting fill=True near line 269
-1. Run: python3 ./index.py
-1. Turn off fill
-1. Select a test to run by setting a=True or b=True and so on
-1. Run: python3 ./index.py
+1. Run: python3 ./test00.py
+1. Select another test to run: test01.py through test08.py
