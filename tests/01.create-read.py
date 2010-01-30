@@ -1,5 +1,7 @@
-import Model
-from setup00 import *
+from Model import Model
+from boot import *
+
+print('Create Product, save(), and read it back')
 
 a = Product()
 a.name = 'New Product'

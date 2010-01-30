@@ -1,5 +1,7 @@
-import Model
-from setup00 import *
+from Model import Model
+from boot import *
+
+print('Create Product with a dict, save(), and read back')
 
 data = {
 	'id': '99999999',

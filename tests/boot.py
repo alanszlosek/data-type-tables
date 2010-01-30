@@ -1,23 +1,23 @@
-import Model
-import HierarchyModel
+from Model import Model
+from HierarchyModel import HierarchyModel
 import sqlite3
 
 def commit():
-	Model.Model.connection.commit()
-	Model.Model.connection.close()
+	Model.connection.commit()
+	Model.connection.close()
 	
 def debug():
-	print('Queries: ' + str(len(Model.Model.queries)))
-	for query in Model.Model.queries:
+	print('Queries: ' + str(len(Model.queries)))
+	for query in Model.queries:
 		print(query[0])
 		print(query[1])
 		print('')
 
 # predefine, so Category can use the class object
-class Product(Model.Model):
+class Product(Model):
 	pass
 
-class Category(HierarchyModel.HierarchyModel):
+class Category(HierarchyModel):
 	name = {
 		'type': 'Text'
 	}
@@ -30,7 +30,7 @@ class Category(HierarchyModel.HierarchyModel):
 	def parent(self):
 		return self.Category
 
-class Product(Model.Model):
+class Product(Model):
 	name = {
 		'type': 'Text'
 	}
@@ -47,6 +47,6 @@ class Product(Model.Model):
 conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
-Model.Model.connection = conn
-Model.Model.connection.isolation_level = None
-Model.Model.module = __name__
+Model.connection = conn
+Model.connection.isolation_level = None
+Model.module = __name__

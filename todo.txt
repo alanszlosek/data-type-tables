@@ -1,3 +1,8 @@
+- how do we represent the top node of a tree?
+	- the Category tree doesn't have a Category as the root node
+	- maybe makeTree() could accept an object
+	- can tree nodes be of mixed object types?
+
 - use Hierarchy.tree to hold id of immediate parent
 	- can use this to easily find siblings
 
