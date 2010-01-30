@@ -38,5 +38,5 @@ Usage
 ====
 
 1. Create an sqlite3 database with reload.sh.
-1. Run: python3 ./test00.py
-1. Select another test to run: test01.py through test08.py
+1. Populate the database with: ./t 00
+1. Run more tests (01 and so on): ./t 01
