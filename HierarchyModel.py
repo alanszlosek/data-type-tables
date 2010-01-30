@@ -1,10 +1,10 @@
-import Model
+from Model import Model
 import datetime
 
 # what if we did away with Text.type and used Relationship?
 # Relationship.key = 'Product'. id='types' and values are all the product ids
 # should probably require that the tree name be passed into each of these, because a record might be in more than one tree
-class HierarchyModel(Model.Model):
+class HierarchyModel(Model):
 	def __init__(self, id=None):
 		super().__init__(id)
 
@@ -15,46 +15,48 @@ class HierarchyModel(Model.Model):
 		data = {
 			'id': self.id
 		}
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
-		cursor = Model.Model.connection.cursor()
+		cursor = Model.connection.cursor()
 		cursor.execute(query, data)
 		row = cursor.fetchone()
 		self.hierarchy = row
 		return row
 
-	def makeTree(self):
+	# need a staticmethod version for creating a tree without an object at the root
+	def makeTree(self, name=''):
 		d = datetime.datetime.today()
-		query = 'insert into Hierarchy (id,type,lft,rgt,createdAt,updatedAt) values(:id,:type,:left,:right,:createdAt,:updatedAt)'
+		query = 'insert into Hierarchy (id,type,lft,rgt,tree,createdAt,updatedAt) values(:id,:type,:left,:right,:tree,:createdAt,:updatedAt)'
 		data = {
 			'id': self.id,
 			'type': self.className,
 			'left': 1,
 			'right': 2,
+			'tree': name,
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
-		Model.Model.connection.execute(query, data)
+		Model.connection.execute(query, data)
 
 	def getParent(self):
 		if self.hierarchy == None:
 			return None
-		query = 'select id from Hierarchy where lft<:left and rgt>:right order by lft desc limit 1'
+		# but Hierarchy.id might not have a type
+		query = 'select type from Hierarchy where id=:parent'
 		data = {
-			'left': self.hierarchy['lft'],
-			'right': self.hierarchy['rgt']
+			'parent': self.hierarchy['parent']
 		}
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
-		cursor = Model.Model.connection.cursor()
+		cursor = Model.connection.cursor()
 		cursor.execute(query, data)
 		row = cursor.fetchone()
 
-		if row == None:
+		if row == None or row['type'] == '':
 			return None
 
 		b = self.type	
-		return b( row )
+		return b( row['id'] )
 
 	def setParent(self, parent):
 		if parent == None:
@@ -69,22 +71,23 @@ class HierarchyModel(Model.Model):
 		data = {
 			'right': rgt
 		}
-		Model.Model.connection.execute(query, data)
+		Model.connection.execute(query, data)
 		query = 'update Hierarchy set lft=lft+2 where lft > :right'
-		Model.Model.connection.execute(query, data)
+		Model.connection.execute(query, data)
 
 		d = datetime.datetime.today()
-		query = 'insert into Hierarchy (id,type,lft,rgt,parent,createdAt,updatedAt) values(:id,:type,:left,:right,:parent,:createdAt,:updatedAt)'
+		query = 'insert into Hierarchy (id,type,lft,rgt,tree,parent,createdAt,updatedAt) values(:id,:type,:left,:right,:tree,:parent,:createdAt,:updatedAt)'
 		data = {
 			'id': self.id,
 			'type': self.className,
 			'left': rgt,
 			'right': rgt+1,
+			'tree': parentHierarchy['tree'],
 			'parent': parentHierarchy['id'],
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
-		Model.Model.connection.execute(query, data)
+		Model.connection.execute(query, data)
 
 	def ancestors(self):
 		pass
@@ -94,11 +97,11 @@ class HierarchyModel(Model.Model):
 			'id': self.id
 		}
 
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
 		parents = []
 		b = self.type	
-		for row in Model.Model.connection.execute(query, data):
+		for row in Model.connection.execute(query, data):
 			parents.append( b(row) )
 		return parents
 
@@ -113,16 +116,33 @@ class HierarchyModel(Model.Model):
 			
 		}
 
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
 		objects = []
 		b = self.type	
-		for row in Model.Model.connection.execute(query, data):
+		for row in Model.connection.execute(query, data):
 			objects.append( b(row['id']) )
 		return objects 
 
 	def descendents(self):
-		pass
+		hierarchy = self.getHierarchy()
+		
+		# would be nice to pull sibling ids and get their fields in one go, maybe by modeling Model.get()?
+		query = 'select id from Hierarchy where tree=:tree and lft>:left and rgt<:right order by lft'
+		data = {
+			'tree': hierarchy['tree'],
+			'left': hierarchy['lft'],
+			'right': hierarchy['rgt']
+			
+		}
+
+		Model.queries.append( (query,data) )
+
+		objects = []
+		b = self.type	
+		for row in Model.connection.execute(query, data):
+			objects.append( b(row['id']) )
+		return objects 
 
 	def siblings(self):
 		# hmm, where do we get lft and rgt from? are they already loaded into the instance?
@@ -137,11 +157,11 @@ class HierarchyModel(Model.Model):
 			
 		}
 
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
 		objects = []
 		b = self.type	
-		for row in Model.Model.connection.execute(query, data):
+		for row in Model.connection.execute(query, data):
 			objects.append( b(row['id']) )
 		return objects 
 
@@ -153,9 +173,9 @@ class HierarchyModel(Model.Model):
 			'tree': name
 		}
 
-		Model.Model.queries.append( (query,data) )
+		Model.queries.append( (query,data) )
 
-		cursor = Model.Model.connection.cursor()
+		cursor = Model.connection.cursor()
 		cursor.execute(query, data)
 		row = cursor.fetchone()
 		if row == None:
