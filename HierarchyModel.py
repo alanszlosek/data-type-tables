@@ -39,30 +39,17 @@ class HierarchyModel(Model):
 		Model.connection.execute(query, data)
 
 	def getParent(self):
-		if self.hierarchy == None:
-			return None
-		# but Hierarchy.id might not have a type
-		query = 'select type from Hierarchy where id=:parent'
-		data = {
-			'parent': self.hierarchy['parent']
-		}
-		Model.queries.append( (query,data) )
-
-		cursor = Model.connection.cursor()
-		cursor.execute(query, data)
-		row = cursor.fetchone()
-
-		if row == None or row['type'] == '':
+		if self.hierarchy == None or self.hierarchy['parent'] == '':
 			return None
 
 		b = self.type	
-		return b( row['id'] )
+		return b( self.hierarchy['parent'] )
 
 	def setParent(self, parent):
 		if parent == None:
 			return
 		# set should be an object of the same type as this one	
-		parentHierarchy = parent.getHierarchy()
+		parentHierarchy = parent.hierarchy
 
 		# begin transaction
 		rgt = parentHierarchy['rgt']
@@ -92,9 +79,10 @@ class HierarchyModel(Model):
 	def ancestors(self):
 		pass
 	def parents(self):
-		query = 'SELECT parent.name FROM Hierachy AS node, Hierarchy AS parent WHERE node.lft BETWEEN parent.lft AND parent.rgt AND node.id=:id ORDER BY parent.lft'
+		query = 'SELECT parent.id FROM Hierachy AS node, Hierarchy AS parent WHERE node.tree=:tree and parent.tree=:tree and node.lft BETWEEN parent.lft AND parent.rgt AND node.id=:id ORDER BY parent.lft'
 		data = {
-			'id': self.id
+			'id': self.id,
+			'tree': self.hierarchy['tree']
 		}
 
 		Model.queries.append( (query,data) )
@@ -102,18 +90,16 @@ class HierarchyModel(Model):
 		parents = []
 		b = self.type	
 		for row in Model.connection.execute(query, data):
-			parents.append( b(row) )
+			parents.append( b( row['id'] ) )
 		return parents
 
 	def children(self):
-		hierarchy = self.getHierarchy()
-		
 		# would be nice to pull sibling ids and get their fields in one go, maybe by modeling Model.get()?
-		query = 'select id from Hierarchy where lft>:left and rgt<:right'
+		query = 'select id from Hierarchy where tree=:tree and lft>:left and rgt<:right'
 		data = {
-			'left': hierarchy['lft'],
-			'right': hierarchy['rgt']
-			
+			'tree': self.hierarchy['tree'],
+			'left': self.hierarchy['lft'],
+			'right': self.hierarchy['rgt']
 		}
 
 		Model.queries.append( (query,data) )
@@ -133,7 +119,6 @@ class HierarchyModel(Model):
 			'tree': hierarchy['tree'],
 			'left': hierarchy['lft'],
 			'right': hierarchy['rgt']
-			
 		}
 
 		Model.queries.append( (query,data) )
@@ -145,15 +130,10 @@ class HierarchyModel(Model):
 		return objects 
 
 	def siblings(self):
-		# hmm, where do we get lft and rgt from? are they already loaded into the instance?
-		parent = self.getParent()
-		parentHierarcy = parent.getHierarchy()
-		
-		# would be nice to pull sibling ids and get their fields in one go, maybe by modeling Model.get()?
-		query = 'select id from Hierarchy where id<>:id and (lft=rgt+1lft>:left and rgt<:right'
+		query = 'select id from Hierarchy where parent=:parent and id<>:id'
 		where = {
-			'left': parentHierarchy['lft'],
-			'right': parentHierarchy['rgt']
+			'parent': self.hierarchy['parent'],
+			'tree': self.hierarchy['tree']
 			
 		}
 
@@ -162,10 +142,10 @@ class HierarchyModel(Model):
 		objects = []
 		b = self.type	
 		for row in Model.connection.execute(query, data):
-			objects.append( b(row['id']) )
+			objects.append( b( row['id'] ) )
 		return objects 
 
-	def tree(treeType, name=''):
+	def getTree(treeType, name=''):
 		# would be nice to pull sibling ids and get their fields in one go, maybe by modeling Model.get()?
 		query = 'select id from Hierarchy where lft=1 and type=:type and tree=:tree'
 		data = {
@@ -184,4 +164,4 @@ class HierarchyModel(Model):
 		b = treeType
 		return b( row['id'] )
 		
-	tree = staticmethod(tree)
+	getTree = staticmethod(getTree)
