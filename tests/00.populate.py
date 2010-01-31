@@ -4,15 +4,11 @@ from Model import Model
 from boot import *
 decimal.getcontext().prec = 2
 
-def catFill(name, children, parent=None):
+def catFill(name, children, parent):
 	c = Category()
 	c.name = name 
-	if parent != None:
-		c.setParent(parent)
+	c.setParent(parent)
 	c.save()
-
-	if parent == None:
-		c.makeTree('categories')
 
 	if len(children) > 0:
 		for (child, children2) in children.items():
@@ -40,8 +36,14 @@ categories = {
 		}
 	}
 }
+
+c = Category()
+c.name = 'Root'
+c.save()
+c.makeTree()
+
 for (category,children) in categories.items():
-	catFill(category, children, None)
+	catFill(category, children, c)
 
 # create product and assign to category
 

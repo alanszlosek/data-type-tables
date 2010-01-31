@@ -14,17 +14,18 @@ class Model:
 
 	# allow id to be passed in, or struct of data
 	def __init__(self, id=None):
+		instanceDict = object.__getattribute__(self, '__dict__')
+		instanceDict['__pending'] = []
+
 		load = False
 		t = type(id)
 		if t is dict:
 			if 'id' in id:
 				self.id = id['id']
 				del id['id']
-				instanceDict = object.__getattribute__(self, '__dict__')
 				# set instance variables
 				instanceDict.update( id )
 				# now push the variables into the pending queue for the save()
-				instanceDict['__pending'] = []
 				for key in id.keys():
 					instanceDict['__pending'].append( key )
 			else:
@@ -116,9 +117,6 @@ class Model:
 		# if key is in the class dict, then the field was defined and we should prepare it to be saved
 		if key in classDict:
 			# store the value deep inside the instance dict, which we'll use to create queries
-			if not '__pending' in instanceDict:
-				instanceDict['__pending'] = []
-
 			if instanceDict['__pending'].count( key ) == 0:
 				instanceDict['__pending'].append( key )
 
@@ -206,6 +204,7 @@ class Model:
 		data = {
 			'id': self.id,
 			'type': self.className,
+			'language': self.language,
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}
@@ -235,7 +234,7 @@ class Model:
 				Model.queries.append( (query,data) )
 
 				if cursor.fetchone() == None:
-					query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+					query = 'insert into ' + table + ' (id,type,key,value,language,createdAt,updatedAt) values(:id,:type,:key,:value,:language,:createdAt,:updatedAt)'
 					cursor.execute(query, data)
 					Model.queries.append( (query,data) )
 

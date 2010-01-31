@@ -1,5 +1,5 @@
 from Model import Model
-from HierarchyModel import HierarchyModel
+from TreeModel import TreeModel
 import sqlite3
 
 def commit():
@@ -17,7 +17,7 @@ def debug():
 class Product(Model):
 	pass
 
-class Category(HierarchyModel):
+class Category(TreeModel):
 	name = {
 		'type': 'Text'
 	}

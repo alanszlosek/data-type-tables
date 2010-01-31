@@ -1,11 +1,13 @@
 from Model import Model
-from HierarchyModel import HierarchyModel
+from TreeModel import TreeModel
 from boot import *
 
-print('Get top Category, print immediate child Categories')
+print('Get top Category, print immediate child Categories, three levels')
 
-top = HierarchyModel.tree(Category)
+top = TreeModel.getTree(Category, '')
 
-print('Top: ' + top.name)
+print(top.name)
 for child in top.children():
-	print(child.name)
+	print('\t' + child.name)
+	for child2 in child.children():
+		print('\t\t' + child2.name)

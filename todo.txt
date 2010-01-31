@@ -1,14 +1,13 @@
-- how do we represent the top node of a tree?
-	- the Category tree doesn't have a Category as the root node
-	- maybe makeTree() could accept an object
-	- can tree nodes be of mixed object types?
-
-- use Hierarchy.tree to hold id of immediate parent
-	- can use this to easily find siblings
+- give access to build-in fields: language, createdAt, updatedAt
 
 - model and import ecommerce database, or a subset
 
 - fix Relationship interaction
+
+
+Done
+
+- test01.py should be a simple instantiation, with a save to db, then fetch back and print
 
 - not quite sure whether to reference module name
 
@@ -18,6 +17,11 @@
 
 - instanceDict['__pending'] should only include names of fields that have changed. No sense in duplicating the values from instanceDict.
 
-Done
+- how do we represent the top node of a tree?
+	- the Category tree doesn't have a Category as the root node
+	- maybe makeTree() could accept an object
+	- can tree nodes be of mixed object types?
+	- trees, by nature, have a node at the top, which i guess is an ok requirement
 
-test01.py should be a simple instantiation, with a save to db, then fetch back and print
+- use Hierarchy.tree to hold id of immediate parent
+	- can use this to easily find siblings
