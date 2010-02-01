@@ -3,6 +3,15 @@ INTRODUCTION
 
 Wanted to see first-hand how an ORM would be written that stores data by data type.
 
+Tables currently in use:
+
+* Text - for storing text values
+* Integer
+* Decimal
+* Relationship - for relating two objects
+* Tree - for creating trees of objects
+* Type - for keeping track of object ids and types (class name)
+
 Sample classes: Category and Product
 
 	class Category(HierarchyModel):
