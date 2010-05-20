@@ -42,6 +42,8 @@ class Model:
 			load = True
 			#print('new ' + str(id))
 
+		self.language = 'en'
+
 		self.className = type(self).__name__
 		self.type = type(self)
 
