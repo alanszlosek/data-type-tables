@@ -17,22 +17,12 @@ class Model:
 	# allow id to be passed in, or struct of data
 	def __init__(self, id=None):
 		instanceDict = object.__getattribute__(self, '__dict__')
-		instanceDict['__pending'] = []
+		instanceDict['pppending'] = []
 
 		load = False
 		t = type(id)
-		if t is dict:
-			if 'id' in id:
-				self.id = id['id']
-				del id['id']
-				# set instance variables
-				instanceDict.update( id )
-				# now push the variables into the pending queue for the save()
-				for key in id.keys():
-					instanceDict['__pending'].append( key )
-			else:
-				# but shouldn't we be able to quickly populate the rest of the fields?
-				print('Not passing in a full dataset. id not specified')
+		if t is dict: # passing in a dict does not load anything from the database
+			instanceDict.update(id)
 
 		elif id == None:
 			self.id = random.randrange(0,1000000)
@@ -46,15 +36,14 @@ class Model:
 			load = True
 			#print('new ' + str(id))
 
+		# these might conflict with class fields
 		self.language = 'en'
-
 		self.className = type(self).__name__
 		self.type = type(self)
 
 		if load:
 			self.load()
 
-		pass
 		
 	def __getattribute__(self, key):
 		# intercept getting a subclass field definition
@@ -104,8 +93,6 @@ class Model:
 				return None
 
 			else:
-				#print('getting ' + key)
-
 				if key in instanceDict: # not relationship
 					return instanceDict[ key ]
 
@@ -116,24 +103,10 @@ class Model:
 			return object.__getattribute__(self, key)
 
 	def __setattr__(self, key, value):
-                #print('Setting ' + key)
-                # get class dict
-		classDict = type(self).__dict__
-		instanceDict = object.__getattribute__(self, '__dict__')
+		if self.pppending.count(key) == 0:
+			self.pppending.append( key ) # shouldn't trigger __setattr__, right?
 
-		# if key is in the class dict, then the field was defined and we should prepare it to be saved
-		if key in classDict:
-			# store the value deep inside the instance dict, which we'll use to create queries
-			if instanceDict['__pending'].count( key ) == 0:
-				instanceDict['__pending'].append( key )
-
-			if key == 'Relationship':
-				print(value)
-
-		else:
-			#print('Invalid field ' + key)
-			pass
-		instanceDict[ key ] = value
+		return object.__setattr__(self, key, value)
 
 	def get(which, where={}):
 		# better:
@@ -176,6 +149,7 @@ class Model:
 	get = staticmethod(get)
 
 	def load(self):
+		# so we can bypass self['_modified']
 		instanceDict = object.__getattribute__(self, '__dict__')
 
 		data = { 'id': self.id, 'type': self.className }
@@ -213,7 +187,9 @@ class Model:
 		relationship = {}
 		
 		#print('Saving:')
-		for key in dict['__pending']:
+		for key in dict['pppending']:
+			if not key in classDict: # skip fields not in the class
+				continue
 			table = classDict[ key ]['type']
 			if table == 'Relationship':
 				relationship[ key ] = self.__getattribute__(key)
@@ -340,7 +316,7 @@ class Model:
 				if self.debug:
 					Model.queries.append( (query,data) )
 
-		dict['__pending'] = []
+		dict['pppending'] = []
 		dict['__exists'] = True
 
 	def value(self, key):
