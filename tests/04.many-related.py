@@ -7,3 +7,6 @@ for category in Model.get(Category):
 	print(category.name)
 	for product in category.Product:
 		print('\t' + product.id, product.name)
+
+
+Model.done()

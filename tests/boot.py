@@ -34,6 +34,9 @@ class Product(Model):
 	name = {
 		'type': 'Text'
 	}
+	description = {
+		'type': 'Text'
+	}
 	price = {
 		'type': 'Decimal',
 		'clean': ''
@@ -48,5 +51,6 @@ conn = sqlite3.connect('dtt.db')
 conn.row_factory = sqlite3.Row
 
 Model.connection = conn
-Model.connection.isolation_level = None
+#Model.connection.isolation_level = None
+Model.cursor = conn.cursor()
 Model.module = __name__

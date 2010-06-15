@@ -7,9 +7,11 @@ decimal.getcontext().prec = 2
 
 class Model:
 	connection = object
+	cursor = object
 	module = '__main__' # default module to find classes in
 	tables = ['Text','Integer','Decimal']
 	# Relationship, Type, Hierarchy
+	debug = False 
 	queries = []
 
 	# allow id to be passed in, or struct of data
@@ -29,6 +31,7 @@ class Model:
 				for key in id.keys():
 					instanceDict['__pending'].append( key )
 			else:
+				# but shouldn't we be able to quickly populate the rest of the fields?
 				print('Not passing in a full dataset. id not specified')
 
 		elif id == None:
@@ -38,6 +41,7 @@ class Model:
 			pass
 
 		else:
+			# this is the only path in which we are certain the record exists in the database
 			self.id = id
 			load = True
 			#print('new ' + str(id))
@@ -81,7 +85,8 @@ class Model:
 						'id': self.id,
 						'key': key
 					}
-					Model.queries.append( (query,data) )
+					if self.debug:
+						Model.queries.append( (query,data) )
 
 					objects = []
 					for row in Model.connection.execute(query, data):
@@ -150,7 +155,8 @@ class Model:
 			'which': which.__name__
 		}
 
-		Model.queries.append( (query,data) )
+		if Model.debug:
+			Model.queries.append( (query,data) )
 
 		cache = {}
 		for row in Model.connection.execute(query, data):
@@ -172,13 +178,29 @@ class Model:
 	def load(self):
 		instanceDict = object.__getattribute__(self, '__dict__')
 
-		query = 'select * from Text where Text.id=:id UNION select * from Integer where Integer.id=:id UNION select * from Decimal where Decimal.id=:id'
-		data = { 'id': self.id }
-		Model.queries.append( (query,data) )
-		for row in Model.connection.execute(query, data):
-			instanceDict[ row['key'] ] = row['value']
+		data = { 'id': self.id, 'type': self.className }
+
+		query = 'select id from Type where id=:id and name=:type'
+		if self.debug:
+			Model.queries.append( (query,data) )
+		cursor = Model.connection.execute(query, data)
+		row = cursor.fetchone()
+		if row != None:
+			# be sure to pull by type too
+
+			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type'
+			data = { 'id': self.id, 'type': self.className }
+			if self.debug:
+				Model.queries.append( (query,data) )
+			for row in Model.connection.execute(query, data):
+				instanceDict[ row['key'] ] = row['value']
+			instanceDict['__exists'] = True
+		else:
+			instanceDict['__exists'] = False
+			
 		return
 
+	# should return boolean reflecting success or failure
 	def save(self):
 		classDict = type(self).__dict__
 		dict = object.__getattribute__(self, '__dict__')
@@ -211,39 +233,51 @@ class Model:
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}
 
-		cursor = Model.connection.cursor()
+		cursor = Model.cursor
 
+		# make sure we don't add a Type instance more than once
+		# but we can add an instance's fields more than once if we want revision-type functionality
 		query = 'select id from Type where id=:id and name=:type'
-		Model.queries.append( (query,data) )
+		if self.debug:
+			Model.queries.append( (query,data) )
 
-		cursor.execute(query , data)
+		cursor.execute(query, data)
 
 		if cursor.fetchone() == None:
 			query = 'insert into Type (id,name,createdAt) values(:id, :type, :createdAt)'
 			cursor.execute(query, data)
 
-			Model.queries.append( (query,data) )
-
-		for (table,fields) in staging.items():
-			for (key,value) in fields.items():
-				data['key'] = key
-				data['value'] = value
-
-				cursor = Model.connection.cursor()
-				query = 'select id from ' + table + ' where id=:id and type=:type and key=:key'
-				cursor.execute(query, data)
-
+			if self.debug:
 				Model.queries.append( (query,data) )
 
-				if cursor.fetchone() == None:
-					query = 'insert into ' + table + ' (id,type,key,value,language,createdAt,updatedAt) values(:id,:type,:key,:value,:language,:createdAt,:updatedAt)'
-					cursor.execute(query, data)
-					Model.queries.append( (query,data) )
+		for (table,fields) in staging.items():
+			# when inserting we can use the extended insert format
+			# we need a broader way to determine whether should be doing an insert, without having to select
 
-				else:
+			if '__exists' in dict and dict['__exists']:
+				for (key,value) in fields.items():
+					data['key'] = key
+					data['value'] = value
+
 					query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
 					cursor.execute(query, data)
-					Model.queries.append( (query,data) )
+					if self.debug:
+						Model.queries.append( (query,data) )
+			elif fields:
+				# insert multiple rows at one time
+				rows = []
+				for (key,value) in fields.items():
+					data2 = {}
+					data2.update(data)
+					data2['key'] = key
+					data2['value'] = value
+
+					rows.append(data2)
+				
+				query = 'insert into ' + table + ' (id,type,key,value,language,createdAt,updatedAt) values(:id,:type,:key,:value,:language,:createdAt,:updatedAt)'
+				cursor.executemany(query, rows)
+				if self.debug:
+					Model.queries.append( (query,rows) )
 
 		# relationship
 		table = 'Relationship'
@@ -253,22 +287,25 @@ class Model:
 			data['key'] = key
 			data['value'] = value.id
 
-			cursor = Model.connection.cursor()
+			cursor = Model.cursor
 			# requires exact checking for id,type,key,value, since the first 3 might map a record to many values
 			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
 			cursor.execute(query, data)
 
-			Model.queries.append( (query,data) )
+			if self.debug:
+				Model.queries.append( (query,data) )
 
 			if cursor.fetchone() == None:
 				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
 				cursor.execute(query, data)
-				Model.queries.append( (query,data) )
+				if self.debug:
+					Model.queries.append( (query,data) )
 
 			else:
 				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
 				cursor.execute(query, data)
-				Model.queries.append( (query,data) )
+				if self.debug:
+					Model.queries.append( (query,data) )
 
 		# reverse relationship
 		table = 'Relationship'
@@ -284,24 +321,34 @@ class Model:
 			data['id'] = value.id
 			data['type'] = target.__name__
 
-			cursor = Model.connection.cursor()
+			cursor = Model.cursor
 			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
 			cursor.execute(query, data)
 
-			Model.queries.append( (query,data) )
+			if self.debug:
+				Model.queries.append( (query,data) )
 
 			if cursor.fetchone() == None:
 				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
 				cursor.execute(query, data)
-				Model.queries.append( (query,data) )
+				if self.debug:
+					Model.queries.append( (query,data) )
 
 			else:
 				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
 				cursor.execute(query, data)
-				Model.queries.append( (query,data) )
+				if self.debug:
+					Model.queries.append( (query,data) )
 
 		dict['__pending'] = []
+		dict['__exists'] = True
 
 	def value(self, key):
 		instanceDict = object.__getattribute__(self, '__dict__')
 		return instanceDict[ key ]
+
+
+	def done():
+		Model.connection.commit()
+		Model.connection.close()
+	done = staticmethod(done)

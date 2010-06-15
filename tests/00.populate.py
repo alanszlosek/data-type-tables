@@ -28,7 +28,10 @@ categories = {
 	},
 	'Land': {
 		'Continent': {
-			'North America': {},
+			'North America': {
+				'Canada': {},
+				'United States': {}
+			},
 			'Australia': {}
 		},
 		'Island': {
@@ -50,10 +53,11 @@ for (category,children) in categories.items():
 categories = Model.get(Category)
 
 i = 0
-while i < 10:
+while i < 100:
 	p = Product()
 	# when these save, Category relationship saving messes up
 	p.name = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 15))
+	p.description = ''.join(random.sample('abcdefghijklmnopqrstuvwxyz ', 20))
 	p.price = str(decimal.Decimal(random.randrange(10000))/100)
 
 	category = random.sample(categories, 1)[0]
@@ -62,3 +66,5 @@ while i < 10:
 	p.save()
 
 	i += 1
+
+Model.done()

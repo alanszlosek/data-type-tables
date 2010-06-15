@@ -11,3 +11,6 @@ for child in top.children():
 	print('\t' + child.name)
 	for child2 in child.children():
 		print('\t\t' + child2.name)
+
+
+Model.done()

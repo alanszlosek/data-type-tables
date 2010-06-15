@@ -12,3 +12,5 @@ if cat:
 	print(p.Category.id)
 else:
 	print('No Category')
+
+Model.done()
