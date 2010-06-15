@@ -49,3 +49,8 @@ Usage
 1. Create an sqlite3 database with reload.sh.
 1. Populate the database with: ./t 00
 1. Run more tests (01 and so on): ./t 01
+
+Notes
+====
+
+You can keep revisions (unofficially) by not passing an id in to the constructor. Pass a dict instead, or just set inst.id=id. When you save, it will avoid creating a duplicate Type record for the id, but will save new records in Integer/Decimal/Text with new dates. I still need to load only the newest dates within load() to further make it work.
