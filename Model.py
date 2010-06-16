@@ -161,7 +161,7 @@ class Model:
 		row = cursor.fetchone()
 		if row != None:
 			# ooh, how can i deal with multiple revisions and fields in the same table?
-			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type'
+			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key order by updatedAt desc limit 1'
 			data = { 'id': self.id, 'type': self.className }
 			if self.debug:
 				Model.queries.append( (query,data) )
@@ -199,13 +199,14 @@ class Model:
 		#	print(staging)
 
 		d = datetime.datetime.today()
+		when = d.strftime('%Y-%m-%d %H:%M:%S.%f')
 
 		data = {
 			'id': self.id,
 			'type': self.className,
 			'language': self.language,
-			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
-			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
+			'createdAt': when,
+			'updatedAt': when
 		}
 
 		cursor = Model.cursor
@@ -321,6 +322,8 @@ class Model:
 	def delete(self, deep=False):
 		tables = ['Type','Decimal','Integer','Text']
 		data = { 'id': self.id, 'type': self.className }
+		
+		# deep is going to be no fun
 		for table in tables:
 			query = 'delete from ' + table + ' where id=:id and type=:type'
 			Model.connection.execute(query, data)
