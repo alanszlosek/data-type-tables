@@ -12,6 +12,8 @@ p.save()
 
 time.sleep(1)
 
+# must re-load instance from scratch to create new revision
+
 p = Product()
 p.id = 123456789
 p.name = 'Second'
