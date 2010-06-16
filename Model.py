@@ -11,8 +11,10 @@ class Model:
 	module = '__main__' # default module to find classes in
 	tables = ['Text','Integer','Decimal']
 	# Relationship, Type, Hierarchy
-	debug = False 
+	debug = True
 	queries = []
+
+	revisions = None
 
 	# allow id to be passed in, or struct of data
 	def __init__(self, id=None):
@@ -23,6 +25,8 @@ class Model:
 		t = type(id)
 		if t is dict: # passing in a dict does not load anything from the database
 			instanceDict.update(id)
+			for key in id.keys():
+				instanceDict['pppending'].append( key )
 
 		elif id == None:
 			self.id = random.randrange(0,1000000)
@@ -81,7 +85,7 @@ class Model:
 					for row in Model.connection.execute(query, data):
 						objects.append( related(row['value']) )
 
-					if 'many' in definition:
+					if definition['many']:
 						return objects
 					elif len(objects) > 0:
 						return objects[0]
@@ -161,7 +165,8 @@ class Model:
 		row = cursor.fetchone()
 		if row != None:
 			# ooh, how can i deal with multiple revisions and fields in the same table?
-			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key order by updatedAt desc limit 1'
+			# what about only loading those fields defined in the class?
+			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key order by createdAt desc limit 1'
 			data = { 'id': self.id, 'type': self.className }
 			if self.debug:
 				Model.queries.append( (query,data) )
@@ -174,7 +179,10 @@ class Model:
 		return
 
 	# should return boolean reflecting success or failure
-	def save(self):
+	def save(self, revisions=None):
+		# choose first non-None value from revisions, self.revisions, Model.revisions
+		revisions = True
+		
 		classDict = type(self).__dict__
 		dict = object.__getattribute__(self, '__dict__')
 
@@ -205,55 +213,48 @@ class Model:
 			'id': self.id,
 			'type': self.className,
 			'language': self.language,
-			'createdAt': when,
-			'updatedAt': when
+			'createdAt': when
 		}
 
 		cursor = Model.cursor
 
-		# make sure we don't add a Type instance more than once
-		# but we can add an instance's fields more than once if we want revision-type functionality
-		query = 'select id from Type where id=:id and type=:type'
+
+		# try to update type first, then insert. we only one 1 Type record for an object
+		query = 'update Type set updatedAt=:createdAt where id=:id and type=:type'
 		if self.debug:
 			Model.queries.append( (query,data) )
 
 		cursor.execute(query, data)
 
-		if cursor.fetchone() == None:
-			query = 'insert into Type (id,type,createdAt) values(:id, :type, :createdAt)'
+		if cursor.rowcount == 0:
+			query = 'insert into Type (id,type,createdAt,updatedAt) values(:id, :type, :createdAt, :createdAt)'
 			cursor.execute(query, data)
 
 			if self.debug:
 				Model.queries.append( (query,data) )
 
 		for (table,fields) in staging.items():
-			# when inserting we can use the extended insert format
-			# we need a broader way to determine whether should be doing an insert, without having to select
+			if not fields:
+				continue
 
-			if '__exists' in dict and dict['__exists']:
-				for (key,value) in fields.items():
-					data['key'] = key
-					data['value'] = value
+			# insert multiple rows at one time
+			rows = []
+			for (key,value) in fields.items():
+				data2 = {}
+				data2.update(data)
+				data2['key'] = key
+				data2['value'] = value
 
-					query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
-					cursor.execute(query, data)
-					if self.debug:
-						Model.queries.append( (query,data) )
-			elif fields:
-				# insert multiple rows at one time
-				rows = []
-				for (key,value) in fields.items():
-					data2 = {}
-					data2.update(data)
-					data2['key'] = key
-					data2['value'] = value
+				if revisions == True: # only delete old values of fields we're about to save
+					query = 'delete from ' + table + ' where id=:id and type=:type and key=:key'
+					cursor.execute(query, data2)
 
-					rows.append(data2)
-				
-				query = 'insert into ' + table + ' (id,type,key,value,language,createdAt,updatedAt) values(:id,:type,:key,:value,:language,:createdAt,:updatedAt)'
-				cursor.executemany(query, rows)
-				if self.debug:
-					Model.queries.append( (query,rows) )
+				rows.append(data2)
+			
+			query = 'insert into ' + table + ' (id,type,key,value,language,createdAt) values(:id,:type,:key,:value,:language,:createdAt)'
+			cursor.executemany(query, rows)
+			if self.debug:
+				Model.queries.append( (query,rows) )
 
 		# relationship
 		table = 'Relationship'
@@ -272,7 +273,7 @@ class Model:
 				Model.queries.append( (query,data) )
 
 			if cursor.fetchone() == None:
-				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:createdAt)'
 				cursor.execute(query, data)
 				if self.debug:
 					Model.queries.append( (query,data) )
@@ -284,6 +285,7 @@ class Model:
 					Model.queries.append( (query,data) )
 
 		# reverse relationship
+		# aren't we only supposed to do this if the relationship is two-way?
 		table = 'Relationship'
 		data['key'] = self.className
 		data['value'] = self.id
@@ -305,7 +307,7 @@ class Model:
 				Model.queries.append( (query,data) )
 
 			if cursor.fetchone() == None:
-				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:updatedAt)'
+				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:createdAt)'
 				cursor.execute(query, data)
 				if self.debug:
 					Model.queries.append( (query,data) )
@@ -338,7 +340,7 @@ class Model:
 			return None
 
 		data = { 'id': self.id, 'type': self.className }
-		query = 'select value,createdAt,updatedAt from ' + classDict[ key ]['type'] + ' where id=:id and type=:type order by updatedAt desc'
+		query = 'select value,createdAt from ' + classDict[ key ]['type'] + ' where id=:id and type=:type order by createdAt desc'
 		cursor = Model.connection.execute(query, data)
 		return cursor
 

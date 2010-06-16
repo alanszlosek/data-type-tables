@@ -31,7 +31,7 @@ for field in ['name']:
 	print('Field: ' + field)
 	
 	for row in p.fieldRevisions(field):
-		print('\t' + row['value'] + ' @' + row['updatedAt'])
+		print('\t' + row['value'] + ' @' + row['createdAt'])
 
 print('Loaded fields')
 p = Product(123456789)
