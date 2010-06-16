@@ -6,6 +6,32 @@ Best for apps with few data modifications compared to reads, since inserts might
 
 Also, best for apps with minimal searching. Joins are fine, but searching, ugh.
 
+What are the advantages of this sort of setup?
+
+	Would say that you don't have to change the database schema, but if you need a way to specify releationships other than Relationship and Tree, you have to modify the db.
+
+	Would say that it does away with needing to cache the DB structure (fields, foreign keys) like Rails or my PHP Ormer does (in file with PHP data structure) ...
+
+	And it lacks some of the automated setup that Rails or ORMer gives, since you have to specify field names and types.
+
+What are the cons?
+
+	In many cases, requires more queries.
+
+	Using a non-relational DBMS makes more sense, if you're making a large app with a constantly changing schema. Wonder if this project could sit on top of one of those.
+
+Wanted to do a proof-of-concept with this project, wordpress like app, but with better extensibility and flexiblity, leaning more in the CMS direction. 
+
+publicize as reasearch: if you think good idea to do datatypetables, try using this for queries and search especially.
+
+where clauses become: A or B group by id having count(id) = len(where)
+BUT A="key = 'name' and value='hmm'" !!!
+... or do JOIN for each clause?
+
+probably good for reading, and changing schema, but not search
+
+would views help?
+
 QUESTIONS
 
 What about sorting? Should I have another table of sort values, similar to Relationship?
