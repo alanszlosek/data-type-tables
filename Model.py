@@ -154,14 +154,13 @@ class Model:
 
 		data = { 'id': self.id, 'type': self.className }
 
-		query = 'select id from Type where id=:id and name=:type'
+		query = 'select id from Type where id=:id and type=:type'
 		if self.debug:
 			Model.queries.append( (query,data) )
 		cursor = Model.connection.execute(query, data)
 		row = cursor.fetchone()
 		if row != None:
-			# be sure to pull by type too
-
+			# ooh, how can i deal with multiple revisions and fields in the same table?
 			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type'
 			data = { 'id': self.id, 'type': self.className }
 			if self.debug:
@@ -213,14 +212,14 @@ class Model:
 
 		# make sure we don't add a Type instance more than once
 		# but we can add an instance's fields more than once if we want revision-type functionality
-		query = 'select id from Type where id=:id and name=:type'
+		query = 'select id from Type where id=:id and type=:type'
 		if self.debug:
 			Model.queries.append( (query,data) )
 
 		cursor.execute(query, data)
 
 		if cursor.fetchone() == None:
-			query = 'insert into Type (id,name,createdAt) values(:id, :type, :createdAt)'
+			query = 'insert into Type (id,type,createdAt) values(:id, :type, :createdAt)'
 			cursor.execute(query, data)
 
 			if self.debug:
@@ -319,12 +318,39 @@ class Model:
 		dict['pppending'] = []
 		dict['__exists'] = True
 
+	def delete(self, deep=False):
+		tables = ['Type','Decimal','Integer','Text']
+		data = { 'id': self.id, 'type': self.className }
+		for table in tables:
+			query = 'delete from ' + table + ' where id=:id and type=:type'
+			Model.connection.execute(query, data)
+
 	def value(self, key):
 		instanceDict = object.__getattribute__(self, '__dict__')
 		return instanceDict[ key ]
+
+	def fieldRevisions(self, key):
+		classDict = type(self).__dict__
+		if not key in classDict:
+			return None
+
+		data = { 'id': self.id, 'type': self.className }
+		query = 'select value,createdAt,updatedAt from ' + classDict[ key ]['type'] + ' where id=:id and type=:type order by updatedAt desc'
+		cursor = Model.connection.execute(query, data)
+		return cursor
 
 
 	def done():
 		Model.connection.commit()
 		Model.connection.close()
 	done = staticmethod(done)
+
+
+def dttDecimal(validation=None):
+	return {'type': 'Decimal'}
+def dttInteger(validation=None):
+	return {'type': 'Integer'}
+def dttText(validation=None):
+	return {'type': 'Text'}
+def dttRelationship(many=False):
+	return {'type': 'Relationship', 'many': many}

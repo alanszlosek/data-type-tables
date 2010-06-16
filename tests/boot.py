@@ -1,4 +1,4 @@
-from Model import Model
+from Model import *
 from TreeModel import TreeModel
 import sqlite3
 
@@ -18,33 +18,17 @@ class Product(Model):
 	pass
 
 class Category(TreeModel):
-	name = {
-		'type': 'Text'
-	}
-	Product = {
-		'type': 'Relationship',
-		#'class': Product,
-		'many': True
-	}
+	name = dttText()
+	Product = dttRelationship(many=True)
 
 	def parent(self):
 		return self.Category
 
 class Product(Model):
-	name = {
-		'type': 'Text'
-	}
-	description = {
-		'type': 'Text'
-	}
-	price = {
-		'type': 'Decimal',
-		'clean': ''
-	}
-	Category = {
-		'type': 'Relationship'
-		#'class': Category
-	}
+	name = dttText()
+	description = dttText()
+	price = dttDecimal()
+	Category = dttRelationship()
 
 
 conn = sqlite3.connect('dtt.db')
