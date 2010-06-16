@@ -1,11 +1,40 @@
-- give access to build-in fields: language, createdAt, updatedAt
+- yeah, want to remove the need to get instance dict for every modification
+	- only want to get compare against the Model fields when save
+	- maybe a small catch for instance dict that keeps track of which fields have been changed
+
+- validation options with type creation ... when add a text field to a Model, specify how to validate it.
+	- uniqueness?
+	- callback
+	- regex
+
+- use a unit-test tool for experience
+
+- measure speed now to get an idea, before i change the way __settattr__ works
+	- saving
+	- retrieval
+	- probably fast enough though
+
+- is there a python data/input validator?
+	- function or regex based checking
+	- return whether failed and a message
+	- attach types to these validation rules so we can map them to the correct data type table
+
+- wanted to see whether we're on auto-commit, since the initial setup of only a few objects in 00.populate.py takes a while
+	- yes, autocommit is on, and takes long
+
+- transactions around saves for an object
+
+- give access to built-in fields: language, createdAt, updatedAt
+	- maybe through fieldRevisions() method?
 
 - model and import ecommerce database, or a subset
 
-- fix Relationship interaction
 
 
 Done
+
+- what about keeping revisions of an object's fields?
+	- prefer to let createdAt/updatedAt do the work
 
 - test01.py should be a simple instantiation, with a save to db, then fetch back and print
 
