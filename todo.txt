@@ -1,3 +1,20 @@
+- lying in bed
+	- save(revisions=True)
+		- if False, deletes from Tables before doing insert
+		- no more update queries, only inserts
+		- can also remove updatedAt field from all tables
+		- but DO update Type.updatedAt when save() has fields to save
+	- p.meta('name') gets language and createdAt for name field
+		- this data might have been cached by load()
+	- load(fields=[]) to specify which fields to load if don't want all
+		- others will be loaded as needed
+		- also caches metadata for all loaded fields somewhere, accessible in a dict where key is field name
+	- Model.revisions to set default action, but value passed to save() overrides
+	- set(key, value) returns self
+		- so we can do set chaining?
+	- update(data={})
+		- uses set() above to merge in data
+
 - yeah, want to remove the need to get instance dict for every modification
 	- only want to get compare against the Model fields when save
 	- maybe a small catch for instance dict that keeps track of which fields have been changed
@@ -30,8 +47,13 @@
 - model and import ecommerce database, or a subset
 
 
+WOULD BE NICE
 
-Done
+- ability to use multiple databases
+	- such as when doing conversion between object types
+
+
+DONE
 
 - what about keeping revisions of an object's fields?
 	- prefer to let createdAt/updatedAt do the work
