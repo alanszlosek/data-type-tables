@@ -12,14 +12,14 @@ WHAT'S IT GOOD FOR?
 DETAILS
 ====
 
-Tables currently in use:
+Tables currently in use (see schema.sqlite3):
 
+* Type - for keeping track of object ids and types (class name)
 * Text - for storing text values
 * Integer
 * Decimal
 * Relationship - for relating two objects
 * Tree - for creating trees of objects
-* Type - for keeping track of object ids and types (class name)
 
 Sample classes: Category and Product
 
@@ -53,7 +53,3 @@ Tests
 1. Populate the database with: ./t 00
 1. Run more tests (01 and so on): ./t 01
 
-Notes
-====
-
-You can keep revisions (unofficially) by not passing an id in to the constructor. Pass a dict instead, or just set inst.id=id. When you save, it will avoid creating a duplicate Type record for the id, but will save new records in Integer/Decimal/Text with new dates. I still need to load only the newest dates within load() to further make it work.
