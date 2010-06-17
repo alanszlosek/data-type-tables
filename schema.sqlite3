@@ -16,6 +16,8 @@ create table Text (id text, type text, key text, value text, language text, crea
 create table Integer (id text, type text, key text, value integer, language text, createdAt text);
 create table Decimal (id text, type text, key text, value real , language text, createdAt text);
 
+create index TypeId on Type (id,type);
+
 create index DecimalCreated on Decimal (createdAt);
 create index IntegerCreated on Integer (createdAt);
 create index TextCreated on Text (createdAt);
