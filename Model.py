@@ -108,7 +108,7 @@ class Model:
 			return object.__getattribute__(self, key)
 
 	def __setattr__(self, key, value):
-		if self.pppending.count(key) == 0:
+		if key[0] != '_' and self.pppending.count(key) == 0:
 			self.pppending.append( key ) # shouldn't trigger __setattr__, right?
 
 		return object.__setattr__(self, key, value)
