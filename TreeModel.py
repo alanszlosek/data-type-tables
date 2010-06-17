@@ -15,9 +15,9 @@ class TreeModel(Model):
 		data = {
 			'id': self.id
 		}
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
-		cursor = Model.connection.cursor()
+		cursor = Model._connection.cursor()
 		cursor.execute(query, data)
 		row = cursor.fetchone()
 		self.hierarchy = row
@@ -28,21 +28,21 @@ class TreeModel(Model):
 		query = 'insert into Tree (id,type,lft,rgt,name,createdAt,updatedAt) values(:id,:type,:left,:right,:name,:createdAt,:updatedAt)'
 		data = {
 			'id': self.id,
-			'type': self.className,
+			'type': self._className,
 			'left': 1,
 			'right': 2,
 			'name': name,
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
-		Model.connection.execute(query, data)
+		Model._connection.execute(query, data)
 		self.getHierarchy()
 
 	def getParent(self):
 		if self.hierarchy == None or self.hierarchy['parent'] == '':
 			return None
 
-		b = self.type	
+		b = self._type	
 		return b( self.hierarchy['parent'] )
 
 	def setParent(self, parent):
@@ -58,15 +58,15 @@ class TreeModel(Model):
 		data = {
 			'right': rgt
 		}
-		Model.connection.execute(query, data)
+		Model._connection.execute(query, data)
 		query = 'update Tree set lft=lft+2 where lft > :right'
-		Model.connection.execute(query, data)
+		Model._connection.execute(query, data)
 
 		d = datetime.datetime.today()
 		query = 'insert into Tree (id,type,lft,rgt,name,parent,createdAt,updatedAt) values(:id,:type,:left,:right,:name,:parent,:createdAt,:updatedAt)'
 		data = {
 			'id': self.id,
-			'type': self.className,
+			'type': self._className,
 			'left': rgt,
 			'right': rgt+1,
 			'name': parentHierarchy['name'],
@@ -74,7 +74,7 @@ class TreeModel(Model):
 			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
 			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
-		Model.connection.execute(query, data)
+		Model._connection.execute(query, data)
 		self.getHierarchy()
 
 	def ancestors(self):
@@ -86,11 +86,11 @@ class TreeModel(Model):
 			'name': self.hierarchy['name']
 		}
 
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
 		parents = []
-		b = self.type	
-		for row in Model.connection.execute(query, data):
+		b = self._type	
+		for row in Model._connection.execute(query, data):
 			parents.append( b( row['id'] ) )
 		return parents
 
@@ -102,11 +102,11 @@ class TreeModel(Model):
 			'parent': self.id
 		}
 
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
 		objects = []
-		b = self.type	
-		for row in Model.connection.execute(query, data):
+		b = self._type	
+		for row in Model._connection.execute(query, data):
 			objects.append( b(row['id']) )
 		return objects 
 
@@ -121,11 +121,11 @@ class TreeModel(Model):
 			'right': hierarchy['rgt']
 		}
 
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
 		objects = []
-		b = self.type	
-		for row in Model.connection.execute(query, data):
+		b = self._type	
+		for row in Model._connection.execute(query, data):
 			objects.append( b(row['id']) )
 		return objects 
 
@@ -137,11 +137,11 @@ class TreeModel(Model):
 			
 		}
 
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
 		objects = []
-		b = self.type	
-		for row in Model.connection.execute(query, data):
+		b = self._type	
+		for row in Model._connection.execute(query, data):
 			objects.append( b( row['id'] ) )
 		return objects 
 
@@ -152,9 +152,9 @@ class TreeModel(Model):
 			'type': treeType.__name__,
 			'name': name
 		}
-		Model.queries.append( (query,data) )
+		Model._queries.append( (query,data) )
 
-		cursor = Model.connection.cursor()
+		cursor = Model._connection.cursor()
 		cursor.execute(query, data)
 		row = cursor.fetchone()
 		if row == None:
