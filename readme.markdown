@@ -1,13 +1,20 @@
 INTRODUCTION
 ====
 
-Wanted to see first-hand how an ORM would be written that stores data by data type.
+Wanted to see first-hand how an ORM would be written that stores data by data type, and what the limitations of such a system are.
 
-WHAT'S IT GOOD FOR?
+IT'S HANDY WHEN ...
 ====
 
-* Allows you to rapidly add data storage to an app
-* You get field-level revisions for free, so when you change a Product's name, all previous values are preserved. (Yes, you can turn it off)
+* You want to store your object hierarchy to a database without having to write SQL
+* Your app is still in flux and you just want to CRUD without having to create or alter tables to store a new piece of data
+* You get field-level revisions for free, so when you change a Product's name and save(), all previous values of name are preserved. (Yes, you can turn it off)
+
+IT'S NOT HANDY WHEN ...
+====
+
+* You need to implement search functionality
+* Speed is important
 
 DETAILS
 ====
@@ -49,7 +56,7 @@ Look at the tests, specifically boot.py for setting up classes, and the individu
 Tests
 ====
 
-1. Create an sqlite3 database with reload.sh.
-1. Populate the database with: ./t 00
-1. Run more tests (01 and so on): ./t 01
+1. Create an sqlite3 database with createDb.sh.
+1. Populate the database with: ./runTest.sh 00
+1. Run more tests (01 and so on): ./runTest.sh 01
 

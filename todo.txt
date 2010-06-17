@@ -1,3 +1,9 @@
+- update readme with more details about the Relationship table and the many flag ...
+	- maybe tweak relationship flags
+	dttRelationship(fetch='one|first|all OR 0(all),1,N', direction='to|from|both|bi'
+	- direction tells us how to save the Relationship: whether we also create a record pointing back to the object
+	- fetch tells how many objects to return. if 1, return the object itself. otherwise and array of objects. 0 for all.
+
 - lying in bed
 	- save(revisions=True)
 		- if False, deletes from Tables before doing insert
