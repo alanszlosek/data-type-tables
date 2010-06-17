@@ -26,14 +26,25 @@ class instantiation(unittest.TestCase):
 		self.assertEqual(len(instanceDict.keys()), 0)
 
 	def test_assignment(self):
+		"""Make sure assignment works, and populates the necessary internal data structures"""
+		instanceDict = object.__getattribute__(self.p, '__dict__')
+
 		self.p.name = 'Testing'
 		self.p.foo = 'Bar'
+
+		self.assertIn('name', instanceDict)
+		self.assertIn('foo', instanceDict)
+		# should have id, name, foo, language
+		self.assertEqual(len(instanceDict['pppending']), 4)
+		self.assertSameElements(instanceDict['pppending'], ['id','language','name','foo'])
 
 		self.assertTrue(self.p.name == 'Testing')
 		self.assertTrue(self.p.foo == 'Bar')
 
+		
+
 	def test_justOneType(self):
-		"""Make sure we only save 1 Type record"""
+		"""Make sure we only save 1 Type record per object type and id"""
 		self.p.id = 123456789
 		self.p.name = 'Testing'
 		self.p.save()
@@ -49,6 +60,8 @@ class instantiation(unittest.TestCase):
 		self.assertEqual(len(rows), 1)
 
 	def test_multipleText(self):
+		"""Make sure field revisions are being saved"""
+		Model.Model._revisions = True
 		self.p.id = 123456789
 		self.p.name = 'A'
 		self.p.save()
@@ -62,6 +75,7 @@ class instantiation(unittest.TestCase):
 		self.assertGreater(len(rows), 2)
 
 	def test_delete(self):
+		"""Make sure deleting an object removes all records from the database"""
 		self.p.id = 123456789
 		self.p.delete()
 
