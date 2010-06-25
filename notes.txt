@@ -1,3 +1,5 @@
+Makes no sense to differentiate relationship direction. Create two records, one point each way, will just make things easier.
+
 I do like how you can use c=type(Product) and then c() to instantiate a Product.
 
 Inserts of all fields will be quite expensive: multiple indices to update, across several tables.
