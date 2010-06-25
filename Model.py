@@ -5,7 +5,7 @@ import datetime
 import decimal
 decimal.getcontext().prec = 2
 
-class Model:
+class Model(object):
 	_connection = object
 	_module = '__main__' # default module to find classes in
 	_tables = ['Text','Integer','Decimal']
@@ -62,9 +62,9 @@ class Model:
 		if key in classDict and type(classDict[ key ]) is dict:
 			definition = classDict[ key ]
 			if definition['type'] == 'Relationship':
-				if 'class' in definition:
+				if 'className' in definition:
 					# class object was passed in ... makes things easy!
-					related = definition['class']
+					related = definition['className']
 				else:
 					# globals() doesn't have the class in scope .... we're in module scope
 					related = sys.modules[ Model._module ].__getattribute__(key)
@@ -72,9 +72,10 @@ class Model:
 				if key in instanceDict:
 					return instanceDict[key]
 				else:
-					query = 'select * from Relationship where id=:id'
+					query = 'select * from Relationship where id=:id and type=:type and key=:key'
 					data = {
 						'id': self.id,
+						'type': self._className,
 						'key': key
 					}
 					if self._debug:
@@ -238,7 +239,7 @@ class Model:
 			rows = []
 			for (key,value) in fields.items():
 				data2 = {}
-				data2.update(data)
+				data2.update( data )
 				data2['key'] = key
 				data2['value'] = value
 
@@ -246,6 +247,7 @@ class Model:
 					query = 'delete from ' + table + ' where id=:id and type=:type and key=:key'
 					Model._connection.execute(query, data2)
 
+				# do i need to clone data here?
 				rows.append(data2)
 			
 			query = 'insert into ' + table + ' (id,type,key,value,language,createdAt) values(:id,:type,:key,:value,:language,:createdAt)'
@@ -253,66 +255,33 @@ class Model:
 			if self._debug:
 				Model._queries.append( (query,rows) )
 
-		# relationship
-		table = 'Relationship'
-		data['id'] = self.id
-		data['type'] = self._className
-		for (key,value) in relationship.items():
-			data['key'] = key
-			data['value'] = value.id
+		# relationships
+		clearData1 = []
+		clearData2 = []
+		saveData = []
+		for (key,values) in relationship.items():
+			relationship = classDict[ key ]
+			# need to respect relationship['className'] if present
+			clearData1.append( {'id':self.id, 'type':self._className, 'key':key} ) # to
+			clearData2.append( {'value':self.id, 'key':self._className, 'type':key} ) # from
 
-			# requires exact checking for id,type,key,value, since the first 3 might map a record to many values
-			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
-			cursor = Model._connection.execute(query, data)
-
-			if self._debug:
-				Model._queries.append( (query,data) )
-
-			if cursor.fetchone() == None:
-				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:createdAt)'
-				Model._connection.execute(query, data)
-				if self._debug:
-					Model._queries.append( (query,data) )
-
+			if type(values) is list:
+				for value in values:
+					saveData.append( {'id':self.id, 'type':self._className, 'key':key, 'value': value.id, 'createdAt':when} )
+					saveData.append( {'id':value.id, 'type':type(value).__name__, 'key':self._className, 'value': self.id, 'createdAt':when} )
 			else:
-				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
-				Model._connection.execute(query, data)
-				if self._debug:
-					Model._queries.append( (query,data) )
+				saveData.append( {'id':self.id, 'type':self._className, 'key':key, 'value': values.id, 'createdAt':when} )
+				saveData.append( {'id':values.id, 'type':type(values).__name__, 'key':self._className, 'value': self.id, 'createdAt':when} )
 
-		# reverse relationship
-		# aren't we only supposed to do this if the relationship is two-way?
-		table = 'Relationship'
-		data['key'] = self._className
-		data['value'] = self.id
-		for (key,value) in relationship.items():
-			target = sys.modules[ Model._module ].__getattribute__(key)
-			targetDict = object.__getattribute__(target, '__dict__')
+		if len(clearData1):
+			query = 'delete from Relationship where id=:id and type=:type and key=:key'
+			Model._connection.executemany(query, clearData1)
+			query = 'delete from Relationship where type=:type and key=:key and value=:value'
+			Model._connection.executemany(query, clearData2)
 
-			if not self._className in targetDict:
-				continue
-
-			data['id'] = value.id
-			data['type'] = target.__name__
-
-			cursor = Model._connection.cursor()
-			query = 'select id from ' + table + ' where id=:id and type=:type and key=:key and value=:value'
-			cursor.execute(query, data)
-
-			if self._debug:
-				Model._queries.append( (query,data) )
-
-			if cursor.fetchone() == None:
-				query = 'insert into ' + table + ' (id,type,key,value,createdAt,updatedAt) values(:id,:type,:key,:value,:createdAt,:createdAt)'
-				cursor.execute(query, data)
-				if self._debug:
-					Model._queries.append( (query,data) )
-
-			else:
-				query = 'update ' + table + ' set value=:value, updatedAt=:updatedAt where id=:id and type=:type and key=:key'
-				cursor.execute(query, data)
-				if self._debug:
-					Model._queries.append( (query,data) )
+		if len(saveData):
+			query = 'insert into Relationship (id,type,key,value,createdAt) values(:id,:type,:key,:value,:createdAt)'
+			Model._connection.executemany(query, saveData)
 
 		instanceDict['pppending'] = []
 		instanceDict['__exists'] = True
@@ -359,8 +328,8 @@ def dttText(validation=None):
 	data = {'type': 'Text'}
 	data.update( locals() )
 	return data
-def dttRelationship(fetch=0,direction='to',to=None):
+def dttRelationship(fetch=0,to=None):
 	data = {'type': 'Relationship'}
 	data.update( locals() )
 	return data
-	#, 'fetch': fetch, 'direction': direction, 'className': className}
+	#, 'fetch': fetch, 'className': to}
