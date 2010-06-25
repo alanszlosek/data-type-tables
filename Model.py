@@ -43,6 +43,7 @@ class Model(object):
 		self.language = 'en'
 		self._className = type(self).__name__
 		self._type = type(self)
+		self._meta = {}
 
 		if load:
 			self.load()
@@ -114,46 +115,6 @@ class Model(object):
 
 		return object.__setattr__(self, key, value)
 
-	def get(which, where={}):
-		# better:
-		# pull from Relationship and build initial cache level
-		# pull from other tables for next cache level
-		# for each at first cache level, instantiate and pass in dict of next cache level
-		# return
-		# at most we'll do N queries, where N is number of tables
-
-		# or unions might help
-
-		queries = []
-		for table in Model._tables:
-			#queries.append( "select " + table + ".* from " + table + ", Relationship where " + table + ".id=Relationship.value and Relationship.id=:id and Relationship.key=:key" )
-			queries.append( "select * from " + table + " where type=:which" )
-
-		query = ' UNION '.join(queries)
-		data = {
-			'which': which.__name__
-		}
-
-		if Model._debug:
-			Model._queries.append( (query,data) )
-
-		cache = {}
-		for row in Model._connection.execute(query, data):
-			id = row['id']
-			if not row['id'] in cache:
-				cache[ id ] = {}
-				cache[ id ]['id'] = id
-
-			cache[ id ][ row['key'] ] = row['value']
-
-		objects = []	
-		className = which
-		for (id, fields) in cache.items():
-			objects.append( className( fields ) )
-		
-		return objects
-	get = staticmethod(get)
-
 	def load(self):
 		# so we can bypass self['_modified']
 		instanceDict = object.__getattribute__(self, '__dict__')
@@ -168,12 +129,14 @@ class Model(object):
 		if row != None:
 			# ooh, how can i deal with multiple revisions and fields in the same table?
 			# what about only loading those fields defined in the class?
-			query = 'select * from Text where Text.id=:id and Text.type=:type UNION select * from Integer where Integer.id=:id and Integer.type=:type UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key order by createdAt desc limit 1'
+			query = 'select * from Text where Text.id=:id and Text.type=:type group by key having max(createdAt) UNION select * from Integer where Integer.id=:id and Integer.type=:type group by key having max(createdAt) UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key having max(createdAt)'
 			data = { 'id': self.id, 'type': self._className }
 			if self._debug:
 				Model._queries.append( (query,data) )
 			for row in Model._connection.execute(query, data):
 				instanceDict[ row['key'] ] = row['value']
+				# populate meta data: dateCreated, mainly
+				instanceDict['_meta'][ row['key'] ] = row['createdAt']
 			instanceDict['__exists'] = True
 		else:
 			instanceDict['__exists'] = False
@@ -308,6 +271,38 @@ class Model(object):
 		query = 'select value,createdAt from ' + classDict[ key ]['type'] + ' where id=:id and type=:type order by createdAt desc'
 		cursor = Model._connection.execute(query, data)
 		return cursor
+
+	def meta(self,key):
+		instanceDict = object.__getattribute__(self, '__dict__')
+		if not key in instanceDict['_meta']:
+			return None
+		return instanceDict['_meta'][ key ]
+
+
+	# static class methods
+	def get(which, where={}):
+		# better:
+		# pull from Relationship and build initial cache level
+		# pull from other tables for next cache level
+		# for each at first cache level, instantiate and pass in dict of next cache level
+		# return
+		# at most we'll do N queries, where N is number of tables
+
+		query = 'select id from Type where type=:which'
+		data = {
+			'which': which.__name__
+		}
+
+		if Model._debug:
+			Model._queries.append( (query,data) )
+
+		objects = []	
+		className = which
+		for row in Model._connection.execute(query, data):
+			objects.append( className( row['id'] ) )
+				
+		return objects
+	get = staticmethod(get)
 
 
 	def done():
