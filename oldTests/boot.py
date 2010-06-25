@@ -19,7 +19,7 @@ class Product(Model):
 
 class Category(TreeModel):
 	name = dttText()
-	Product = dttRelationship(direction='both')
+	Product = dttRelationship(fetch=0)
 
 	def parent(self):
 		return self.Category
@@ -28,7 +28,7 @@ class Product(Model):
 	name = dttText()
 	description = dttText()
 	price = dttDecimal()
-	Category = dttRelationship(fetch=1,direction='both')
+	Category = dttRelationship(fetch=1)
 
 
 conn = sqlite3.connect('dtt.db')
