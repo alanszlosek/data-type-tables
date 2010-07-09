@@ -17,6 +17,7 @@ IT'S NOT HANDY WHEN ...
 
 * You need to implement search functionality
 * Speed is important
+* Keeping a small database is important
 
 DETAILS
 ====
@@ -32,16 +33,16 @@ Tables currently in use (see schema.sqlite3):
 
 Sample classes: Category and Product
 
-	class Category(HierarchyModel):
-		# HierarchyModel is a sub-class of Model
-		# extending HierarchyModel gives us parent/child functionality
+	class Category(TreeModel):
+		# TreeModel is a sub-class of Model
+		# extending TreeModel gives us parent/child functionality
 		name = dttText() # means this value is stored in the Text table
-		Product = dttRelationship(many=True) # many=True also makes a pointer from Product back to Category
+		Product = dttManyRelationship(fetch=0) # fetch all products, and save a pointer from the Product to this Category
 
 	class Product(Model):
 		name = dttText()
 		price = dttDecimal()
-		Category = dttRelationship()
+		Category = dttRelationship(fetch=1) # 
 
 They extend Model, which gives them: save(), delete()
 
@@ -53,9 +54,11 @@ Get Product objects for the first Category:
 Usage
 ====
 
-Look at the tests, specifically boot.py for setting up classes, and the individual test files themselves for details.
+Look at the code the examples folder, specifically boot.py for setting up classes, and the numbered files for details.
 
-Tests
+Note: when extending the TreeModel class, you must first create an instance of your derived class, save it, and then call INSTANCE.makeTree() to create the root node of the tree. Otherwise calls to setParent() will fail to do anything.
+
+Examples
 ====
 
 1. Create an sqlite3 database with createDb.sh.
