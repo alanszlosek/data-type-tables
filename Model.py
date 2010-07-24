@@ -28,9 +28,8 @@ class Model(object):
 				instanceDict['pppending'].append( key )
 
 		elif id == None:
-			self.id = random.randrange(0,1000000)
-			# hmm, what to do here?
-			# make sure doesn't already exist
+			# no id specified, will generate one with the AutoId table upon save
+			self.id = None
 			pass
 
 		else:
@@ -63,12 +62,8 @@ class Model(object):
 		if key in classDict and type(classDict[ key ]) is dict:
 			definition = classDict[ key ]
 			if definition['type'] == 'Relationship':
-				if 'className' in definition:
-					# class object was passed in ... makes things easy!
-					related = definition['className']
-				else:
-					# globals() doesn't have the class in scope .... we're in module scope
-					related = sys.modules[ Model._module ].__getattribute__(key)
+				# to should point to the class in every relationship
+				related = definition['to']
 
 				if key in instanceDict:
 					return instanceDict[key]
@@ -129,8 +124,7 @@ class Model(object):
 		if row != None:
 			# ooh, how can i deal with multiple revisions and fields in the same table?
 			# what about only loading those fields defined in the class?
-			query = 'select * from Text where Text.id=:id and Text.type=:type group by key having max(createdAt) UNION select * from Integer where Integer.id=:id and Integer.type=:type group by key having max(createdAt) UNION select * from Decimal where Decimal.id=:id and Decimal.type=:type group by key having max(createdAt)'
-			data = { 'id': self.id, 'type': self._className }
+			query = 'select * from Text where Text.id=:id group by key having max(createdAt) UNION select * from Integer where Integer.id=:id group by key having max(createdAt) UNION select * from Decimal where Decimal.id=:id group by key having max(createdAt)'
 			if self._debug:
 				Model._queries.append( (query,data) )
 			for row in Model._connection.execute(query, data):
@@ -173,11 +167,19 @@ class Model(object):
 		when = d.strftime('%Y-%m-%d %H:%M:%S.%f')
 
 		data = {
-			'id': self.id,
 			'type': self._className,
 			'language': self.language,
 			'createdAt': when
 		}
+
+		if self.id == None: # use auto-incremented id
+			query = 'insert into AutoId (type) values(:type)'
+			# should check the return value to make sure it worked
+			cursor = Model._connection.cursor()
+			cursor.execute(query, data)
+			self.id = cursor.lastrowid
+
+		data['id'] = self.id
 
 		# try to update type first, then insert. we only one 1 Type record for an object
 		query = 'update Type set updatedAt=:createdAt where id=:id and type=:type'
@@ -207,13 +209,13 @@ class Model(object):
 				data2['value'] = value
 
 				if revisions == False: # only delete old values of fields we're about to save
-					query = 'delete from ' + table + ' where id=:id and type=:type and key=:key'
+					query = 'delete from ' + table + ' where id=:id and key=:key'
 					Model._connection.execute(query, data2)
 
 				# do i need to clone data here?
 				rows.append(data2)
 			
-			query = 'insert into ' + table + ' (id,type,key,value,language,createdAt) values(:id,:type,:key,:value,:language,:createdAt)'
+			query = 'insert into ' + table + ' (id,key,value,language,createdAt) values(:id,:key,:value,:language,:createdAt)'
 			Model._connection.executemany(query, rows)
 			if self._debug:
 				Model._queries.append( (query,rows) )
@@ -255,7 +257,7 @@ class Model(object):
 		
 		# deep is going to be no fun
 		for table in tables:
-			query = 'delete from ' + table + ' where id=:id and type=:type'
+			query = 'delete from ' + table + ' where id=:id'
 			Model._connection.execute(query, data)
 
 	def value(self, key):
@@ -268,7 +270,7 @@ class Model(object):
 			return None
 
 		data = { 'id': self.id, 'type': self._className }
-		query = 'select value,createdAt from ' + classDict[ key ]['type'] + ' where id=:id and type=:type order by createdAt desc'
+		query = 'select value,createdAt from ' + classDict[ key ]['type'] + ' where id=:id order by createdAt desc'
 		cursor = Model._connection.execute(query, data)
 		return cursor
 

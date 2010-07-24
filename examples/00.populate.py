@@ -7,8 +7,8 @@ decimal.getcontext().prec = 2
 def catFill(name, children, parent):
 	c = Category()
 	c.name = name 
-	c.setParent(parent)
 	c.save()
+	c.setParent(parent)
 
 	if len(children) > 0:
 		for (child, children2) in children.items():

@@ -25,15 +25,14 @@ class TreeModel(Model):
 	# need a staticmethod version for creating a tree without an object at the root
 	def makeTree(self, name=''):
 		d = datetime.datetime.today()
-		query = 'insert into Tree (id,type,lft,rgt,name,createdAt,updatedAt) values(:id,:type,:left,:right,:name,:createdAt,:updatedAt)'
+		query = 'insert into Tree (id,type,lft,rgt,name,createdAt) values(:id,:type,:left,:right,:name,:createdAt)'
 		data = {
 			'id': self.id,
 			'type': self._className,
 			'left': 1,
 			'right': 2,
 			'name': name,
-			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
-			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
+			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
 		Model._connection.execute(query, data)
 		self.getHierarchy()
@@ -63,7 +62,7 @@ class TreeModel(Model):
 		Model._connection.execute(query, data)
 
 		d = datetime.datetime.today()
-		query = 'insert into Tree (id,type,lft,rgt,name,parent,createdAt,updatedAt) values(:id,:type,:left,:right,:name,:parent,:createdAt,:updatedAt)'
+		query = 'insert into Tree (id,type,lft,rgt,name,parent,createdAt) values(:id,:type,:left,:right,:name,:parent,:createdAt)'
 		data = {
 			'id': self.id,
 			'type': self._className,
@@ -71,8 +70,7 @@ class TreeModel(Model):
 			'right': rgt+1,
 			'name': parentHierarchy['name'],
 			'parent': parentHierarchy['id'],
-			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S'),
-			'updatedAt': d.strftime('%Y-%m-%d %H:%M:%S')
+			'createdAt': d.strftime('%Y-%m-%d %H:%M:%S')
 		}	
 		Model._connection.execute(query, data)
 		self.getHierarchy()
