@@ -1,3 +1,26 @@
+- better way to determine class name without going through modules
+
+- ability to generate tables for each class, with all features
+	- ugh. why?
+
+- get should accept where and sorting
+	- where data structure, not sql
+	- sorting data structure too
+	where = {
+		'Text.name':'Thomas'
+	}
+	sorting = {
+		'Text.name': 'asc'
+	}
+
+- lazy loading
+	- if a field isn't loaded, yet exists in class, try to load
+
+- sorted TreeModel
+	- how to specify which key/value to sort on?
+	- and how do we get back a sorted list?
+	- maybe a _sorting method implemented in subclasses that modifies the get() query?
+
 - organize unit tests
 
 - enforce uniqueness of Type (id,type)
@@ -66,6 +89,11 @@ WOULD BE NICE
 
 
 DONE
+
+- can i do away with the Type fields in each datatype table?
+	- only if i ensure with the Type table that every id is unique, not duplicated across types
+	- have to make sure joins and queries don't pull with this field
+	- why? to save on storage space
 
 - wanted to see whether we're on auto-commit, since the initial setup of only a few objects in 00.populate.py takes a while
 	- yes, autocommit is on, and takes long
