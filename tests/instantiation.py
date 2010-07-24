@@ -14,6 +14,7 @@ class instantiation(unittest.TestCase):
 	def test_classDict(self):
 		"""Make sure instance's class dict has fields"""
 		classDict = object.__getattribute__(type(self.p), '__dict__')
+		# remove all keys with an underscore, as they are internals
 		classDict = self.cleanDict(classDict)
 
 		self.assertNotEqual(len(classDict.keys()), 0)
@@ -43,22 +44,6 @@ class instantiation(unittest.TestCase):
 
 		
 
-	def test_justOneType(self):
-		"""Make sure we only save 1 Type record per object type and id"""
-		self.p.id = 123456789
-		self.p.name = 'Testing'
-		self.p.save()
-
-		self.p = Product()
-		self.p.id = 123456789
-		self.p.name = 'Testing'
-		self.p.save()
-
-		cursor = Model.Model._connection.cursor()
-		cursor.execute('select * from Type where id=:id and type=:type', {'id':123456789, 'type':'Product'})
-		rows = cursor.fetchall()
-		self.assertEqual(len(rows), 1)
-
 	def test_multipleText(self):
 		"""Make sure field revisions are being saved"""
 		Model.Model._revisions = True
@@ -70,9 +55,9 @@ class instantiation(unittest.TestCase):
 		self.p.save()
 
 		cursor = Model.Model._connection.cursor()
-		cursor.execute('select * from Text where id=:id and type=:type', {'id':123456789, 'type':'Product'})
+		cursor.execute('select * from Text where id=:id', {'id':123456789, 'type':'Product'})
 		rows = cursor.fetchall()
-		self.assertGreater(len(rows), 2)
+		self.assertEqual(len(rows), 2)
 
 	def test_delete(self):
 		"""Make sure deleting an object removes all records from the database"""
@@ -85,7 +70,7 @@ class instantiation(unittest.TestCase):
 		rows = cursor.fetchall()
 		self.assertEqual(len(rows), 0)
 
-		cursor.execute('select * from Text where id=:id and type=:type', {'id':123456789, 'type':'Product'})
+		cursor.execute('select * from Text where id=:id', {'id':123456789, 'type':'Product'})
 		rows = cursor.fetchall()
 		self.assertEqual(len(rows), 0)
 		
@@ -93,7 +78,7 @@ class instantiation(unittest.TestCase):
 	def cleanDict(self, a):
 		b = {}
 		for (key,value) in a.items():
-			if key[0:1] == '__':
+			if key[0:1] == '_':
 				continue
 			if type(value) is dict:
 				b[ key ] = value
