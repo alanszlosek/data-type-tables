@@ -22,7 +22,7 @@ IT'S NOT HANDY WHEN ...
 DETAILS
 ====
 
-Tables currently in use (see schema.sqlite3):
+Tables currently in use (see schema.sqlite3.txt):
 
 * Type - for keeping track of object ids and types (class name)
 * Text - for storing text values
